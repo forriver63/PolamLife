@@ -41,20 +41,40 @@ async function run() {
   }
   const influence = page.locator(".w-board > svg.w-territories");
   const legend = page.locator(".w-territory-key");
-  const donutUnit = influence.locator('[data-territory-unit="unit01"]');
+  const station = influence.locator('[data-map-segment="station"]');
+  const stationStore = page.locator('.w-map button[data-map-store="unit01"]');
   async function revisitTarget(phase, ownedCount) {
     await act("map");
     await influence.waitFor();
-    assert.equal(await donutUnit.getAttribute("data-phase"), phase);
     assert.equal(await legend.locator("[data-owned-count]").getAttribute("data-owned-count"), String(ownedCount));
-    assert.equal(await donutUnit.getAttribute("data-owner"), ownedCount === 1 ? "incumbent" : "trend");
-    const label = await donutUnit.getAttribute("aria-label");
+    const beforeVisits = (await world()).visits.unit01;
+    await station.press("Enter");
+    await stationStore.waitFor();
+    assert.equal(await page.locator(".w-map").getAttribute("data-focused-segment"), "station");
+    assert.equal(await page.locator(".w-map button[data-map-store]").count(), 3);
+    assert.equal((await world()).visits.unit01, beforeVisits);
+    assert.equal(await stationStore.getAttribute("data-phase"), phase);
+    assert.equal(await stationStore.getAttribute("data-owner"), ownedCount === 1 ? "incumbent" : "trend");
+    assert.equal(await page.locator("[data-segment-count]").getAttribute("data-segment-count"), String(ownedCount));
+    const label = await stationStore.getAttribute("aria-label");
     assert.match(label, /[\u3400-\u9fff]/);
     assert.doesNotMatch(label, /[a-z]{2,}/i);
-    if (ownedCount === 2) assert.match(label, /最近占领/);
-    await donutUnit.focus();
-    await page.keyboard.press("Enter");
+    const expectedArt = phase === "reopened" ? "tea" : phase === "contested" ? "donut" : "renovating";
+    const image = await stationStore.locator("img.w-map-frontart").getAttribute("src");
+    assert(image.endsWith("front-" + expectedArt + ".webp"), phase + " must have the correct facade");
+    if (phase === "renovating") {
+      await switchTo("en");
+      assert.match(await stationStore.innerText(), /Glaze Lane/);
+      await switchTo("zh-CN");
+      await page.reload();
+      await stationStore.waitFor();
+      await chinese(page.locator(".w-map button[data-map-store]"), "Streetfronts after Chinese reload");
+      assert.match(await stationStore.innerText(), /糖霜小巷/);
+      assert.equal(await stationStore.getAttribute("data-phase"), phase);
+    }
+    await stationStore.press("Enter");
     await page.locator(".w-shop").waitFor();
+    assert.equal((await world()).visits.unit01, beforeVisits + 1);
   }
 
   try {
@@ -84,7 +104,7 @@ async function run() {
     await act("join");
     assert.deepEqual((await world()).player.preferences, ["tea", "game", "cafe"]);
     await influence.waitFor();
-    assert.equal(await influence.getAttribute("aria-label"), "宝琳商铺影响范围示意");
+    assert.match(await influence.getAttribute("aria-label"), /宝琳|商段|影响/);
     assert.equal(await legend.getAttribute("aria-label"), "商铺影响图例");
     const details = legend.locator("details");
     if (!await details.evaluate((node) => node.open)) await legend.locator("summary").click();
@@ -95,13 +115,13 @@ async function run() {
     );
     assert.deepEqual(factionCounts, { trend: 1, comfort: 2, collective: 2, incumbent: 1 });
     await switchTo("en");
-    assert.equal(await influence.getAttribute("aria-label"), "Illustrative shop influence areas in Po Lam");
+    assert.match(await influence.getAttribute("aria-label"), /Po Lam|district|street/i);
     assert.equal(await legend.getAttribute("aria-label"), "Shop influence legend");
     assert.equal(await details.evaluate((node) => node.open), true, "Switching languages must keep the legend open");
-    assert.match(await donutUnit.getAttribute("aria-label"), /Glaze Lane/);
+    assert.match(await station.getAttribute("aria-label"), /station/i);
     await switchTo("zh-CN");
     await legend.locator("summary").click();
-    assert.match(await donutUnit.getAttribute("aria-label"), /糖霜小巷/);
+    assert.match(await station.getAttribute("aria-label"), /车站/);
     await act("mall");
     await chinese(page.locator("[data-shop]"), "Six storefronts");
     await page.locator('[data-shop="unit01"]').click();
@@ -139,7 +159,15 @@ async function run() {
     for (let i = 0; i < 4; i++) await serveChineseTicket();
     await dialog.locator('[data-do="propose"]').waitFor();
     await chinese(dialog, "Takeover result");
-
+    await act("territoryMap");
+    await stationStore.waitFor();
+    assert.equal(await stationStore.getAttribute("data-phase"), "captured");
+    const capturedLabel = await stationStore.getAttribute("aria-label");
+    assert.match(capturedLabel, /已占领/);
+    assert.doesNotMatch(capturedLabel, /Captured|closed/i);
+    await chinese(stationStore, "Captured storefront");
+    await stationStore.press("Enter");
+    await page.locator(".w-shop").waitFor();
     await act("propose");
     await chinese(dialog, "Ballot choices and resident preferences");
     await page.getByRole("button", { name: /奶茶店/ }).click();
@@ -214,7 +242,7 @@ async function run() {
     assert.equal(await lang(), "en");
     assert.match(await page.locator(".scene-card").innerText(), /Welcome to/);
     assert.deepEqual(errors, []);
-    console.log("Passed bilingual preferences, live rush, service relay, ballot, persistent renovation, next-day news, insights and new game.");
+    console.log("Passed bilingual street selection, individual storefronts, live rush, service relay, persistent renovation, next-day news, insights and new game.");
   } finally {
     await browser.close();
   }

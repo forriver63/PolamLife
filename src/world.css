@@ -797,7 +797,7 @@
 .w-influence-on .w-art {
   filter: saturate(0.66) brightness(0.92);
 }
-.w-territories {
+.w-commerce-map {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -806,73 +806,103 @@
   overflow: visible;
   pointer-events: none;
 }
-.w-domain {
-  cursor: pointer;
-  outline: none;
-}
 .w-domain-fill {
   fill-opacity: 0.43;
   pointer-events: visiblePainted;
   transition: fill-opacity 0.16s;
 }
-.w-domain:hover .w-domain-fill,
-.w-domain:focus-visible .w-domain-fill {
-  fill-opacity: 0.62;
+.w-commerce-map:not(.w-territories) .w-domain-fill {
+  pointer-events: none;
+  fill-opacity: 0;
 }
-.w-domain:focus-visible .w-domain-label rect {
-  stroke: white;
+.w-commerce-map:not(.w-territories) :is(.w-domain-line, .w-line-casing) {
+  display: none;
+}
+.w-segment-zone {
+  outline: none;
+  cursor: pointer;
+}
+.w-territories .w-segment-zone:hover .w-domain-fill {
+  fill-opacity: 0.52;
+}
+.w-segment-sign,
+.w-overview-unit {
+  pointer-events: visiblePainted;
+}
+.w-segment-sign {
+  color: #fff6fe;
+  filter: drop-shadow(1px 2px 2px #39203796);
+}
+.w-segment-sign rect {
+  fill: #3d2747;
+  stroke: #efc5df;
+  stroke-width: 1.6px;
+}
+.w-segment-zone:focus-visible .w-segment-sign rect {
+  stroke: #ffebae;
   stroke-width: 4px;
 }
-.w-domain-label {
-  pointer-events: visiblePainted;
-  filter: drop-shadow(1px 2px 1px #29182cc4);
+.w-segment-name {
+  fill: #fff3fa;
+  font: 800 14px var(--sans);
 }
-.w-domain-label text {
-  pointer-events: none;
-  fill: #fff4fc;
+.w-segment-sub {
+  fill: #ead1e4;
+  font: 550 9px var(--sans);
 }
-.w-domain-mini {
-  display: none;
+.w-segment-tally {
+  fill: #ffe4a7;
+  font: 750 14px var(--mono);
 }
-.w-map-overview .w-domain-label > :not(.w-domain-mini) {
-  display: none;
-}
-.w-map-overview .w-domain-label .w-domain-mini {
-  display: block;
-  transform: scale(var(--w-mini-scale));
-}
-.w-domain-mini text {
-  font: 750 11px var(--mono);
-}
-.w-domain-unit {
-  font: 650 9px var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.11em;
-}
-.w-domain-name {
-  font: 800 12.5px var(--sans);
-}
-.w-claim-stamp circle {
-  fill: #ffe69b;
-  stroke: #533449;
+.w-overview-unit circle {
+  stroke: #423244;
   stroke-width: 1.5px;
 }
-.w-claim-stamp path {
-  fill: #503342;
+.w-overview-unit text {
+  fill: #382637;
+  text-anchor: middle;
+  font: 800 10px var(--mono);
+  pointer-events: none;
 }
-.w-claim-outline {
+.w-commerce-map:not(.w-territories) .w-overview-unit {
+  display: none;
+}
+.w-map-overview .w-segment-sign {
+  transform: scale(calc(var(--w-mini-scale) * 0.62));
+}
+.w-map-overview .w-overview-unit circle {
+  stroke-width: 2.5;
+}
+/* At district scale the mall already has a landmark. Its separate rooftop stamp
+   otherwise sits over the eastern street's ownership tally. */
+.w-map-overview.w-influence-on .w-rooftop {
+  display: none;
+}
+.w-map:not([data-focused-segment=""])
+  :is(.w-place, .w-person, .w-rooftop, .w-segment-marker, .w-overview-unit) {
+  display: none;
+}
+.w-map:not([data-focused-segment=""])
+  .w-segment-zone:not([aria-pressed="true"])
+  .w-domain-fill {
+  fill-opacity: 0.14;
+}
+.w-map:not([data-focused-segment=""])
+  .w-segment-zone[aria-pressed="true"]
+  .w-domain-fill {
+  fill-opacity: 0.31;
+}
+.w-map:not([data-focused-segment=""])
+  .w-commerce-map:not(.w-territories)
+  .w-domain-fill {
+  fill-opacity: 0;
+}
+.w-overview-unit circle.w-claim-ring {
   fill: none;
   stroke: #ffe9ab;
-  stroke-width: 7;
-  stroke-dasharray: 7 9;
-  stroke-linejoin: round;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 2px #4b2b27);
   pointer-events: none;
-  animation: w-claim-march 3.6s linear 4;
-}
-@keyframes w-claim-march {
-  to {
-    stroke-dashoffset: -64;
-  }
 }
 .w-domain-line,
 .w-line-casing {
@@ -1046,6 +1076,9 @@
     padding: 5px 8px;
     font-size: 11px;
   }
+  body:has(.w-influence-on:not([data-focused-segment=""])) #announcer {
+    top: 217px;
+  }
   .w-territory-key {
     top: 52px;
     right: 10px;
@@ -1079,5 +1112,285 @@
   .viewport:has(.w-influence-on) .scene-card .btn {
     min-height: 30px;
     font-size: 11px;
+  }
+}
+.w-segment-hud {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  width: max-content;
+  max-width: calc(100% - 26px);
+  color: #fff5fd;
+  border: 1.5px solid #d8a8ca;
+  border-radius: 10px;
+  background: #37223feb;
+  box-shadow:
+    0 3px 0 #2e193e60,
+    0 7px 18px #341b3c35;
+  cursor: default;
+  touch-action: manipulation;
+}
+.w-segment-nav,
+.w-street-headline,
+.w-street-change,
+.w-segment-hud button {
+  display: flex;
+  align-items: center;
+}
+.w-segment-nav {
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #92708d90;
+  padding: 0 5px;
+}
+.w-segment-hud button {
+  gap: 4px;
+  font: 650 11px var(--sans);
+  padding: 6px 7px;
+  color: #f1d7eb;
+  background: transparent;
+}
+.w-segment-hud button:hover {
+  color: white;
+  background: #63405e;
+}
+.w-street-headline {
+  gap: 8px;
+  padding: 7px 11px;
+}
+.w-street-headline img {
+  width: 28px;
+  height: 25px;
+}
+.w-street-headline strong {
+  font: 800 20px/1.04 var(--display);
+  letter-spacing: -0.03em;
+}
+.w-street-holdings {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px 6px;
+  border: 1px solid #a9819e;
+  background: #56325c;
+  border-radius: 4px;
+  color: #ffedb9;
+  white-space: nowrap;
+}
+.w-street-holdings small {
+  font: 600 10px var(--sans);
+}
+.w-street-count {
+  font: 750 13px var(--mono);
+}
+.w-street-mix {
+  margin-left: auto;
+  color: #ecd5e6;
+  font: 550 10px var(--sans);
+}
+.w-street-change {
+  justify-content: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  border-top: 1px solid #92708d90;
+  padding: 4px 8px;
+  color: #f4dcb5;
+  font: 650 10px/1.2 var(--sans);
+}
+.w-street-change strong {
+  color: #ffedb1;
+}
+.w-map .w-map-store {
+  position: absolute;
+  z-index: 4;
+  width: var(--w-store-width, 145px);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  transform: translate(-50%, -50%) scale(var(--w-store-counter, 1));
+  transform-origin: center;
+  color: #fff9e7;
+  background: transparent;
+  filter: drop-shadow(2px 4px 2px #321d3b88);
+}
+.w-map-store:hover,
+.w-map-store:focus-visible {
+  z-index: 6;
+  filter: drop-shadow(0 0 4px #fff6d8) drop-shadow(2px 4px 2px #321d3b88);
+}
+.w-street-unit {
+  position: absolute;
+  z-index: 2;
+  bottom: 100%;
+  left: 0;
+  padding: 3px 5px;
+  font: 750 9px/1.1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid #54344b;
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  background: #fff1db;
+  color: #4d3545;
+}
+.w-map-front {
+  position: relative;
+  display: block;
+  line-height: 0;
+  overflow: hidden;
+  border: 2px solid #5a4451;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+  background: #5a4451;
+}
+.w-map-frontart {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+.w-front-name {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 21.75%;
+  display: grid;
+  place-items: center;
+  color: #fff6db;
+  text-shadow: 0 1px 1px #59494c;
+  font: 800 clamp(11px, 1.05vw, 16px) / 1 var(--sans);
+}
+.w-store-owner {
+  position: relative;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  background: #3b2944;
+  padding: 4px 5px;
+  color: #fff5fc;
+  border: 1px solid #6a4a67;
+  border-top: 2px solid var(--w-owner);
+  font: 650 12px/1 var(--sans);
+}
+.w-store-owner .w-faction-badge {
+  width: 17px;
+  height: 18px;
+}
+.w-store-owner .w-faction-badge svg {
+  width: 12px;
+  height: 12px;
+}
+.w-store-phase {
+  position: absolute;
+  top: 100%;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: max-content;
+  max-width: 135%;
+  padding: 4px 6px;
+  background: #fff1cd;
+  color: #503e30;
+  border: 1px solid #7a6154;
+  border-radius: 0 0 4px 4px;
+  font: 700 10px/1.15 var(--sans);
+  text-align: center;
+}
+.w-store-phase i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #9c6944;
+  flex: none;
+}
+.w-map-store[aria-current="true"] .w-map-front {
+  outline: 2px solid #fff1c1;
+  outline-offset: 1px;
+}
+.w-map-store[data-recent-store] .w-street-unit {
+  color: #44311d;
+  background: #ffdd92;
+}
+.w-map-store[data-phase="reopened"] .w-store-phase {
+  background: #d5f1d7;
+  color: #345443;
+}
+.w-map-store[data-phase="contested"] .w-store-phase {
+  background: #ffd9cc;
+  color: #67393a;
+}
+@media (max-width: 780px) {
+  .w-segment-hud {
+    top: 54px;
+  }
+  .w-segment-nav {
+    gap: 5px;
+  }
+  .w-street-headline {
+    padding: 5px 8px;
+    gap: 5px;
+  }
+  .w-street-headline strong {
+    font-size: 16px;
+  }
+  .w-street-headline img {
+    width: 19px;
+    height: 19px;
+  }
+  .w-street-holdings {
+    padding: 3px;
+    gap: 3px;
+  }
+  .w-street-holdings small {
+    font-size: 9px;
+  }
+  .w-street-count {
+    font-size: 11px;
+  }
+  .w-street-mix {
+    font-size: 9px;
+  }
+  .w-map:not([data-focused-segment=""]) .w-territory-key {
+    top: auto;
+    bottom: 9px;
+    right: 8px;
+  }
+  .w-map:not([data-focused-segment=""]) .w-controls {
+    bottom: 71px;
+  }
+  .w-map:not([data-focused-segment=""])
+    .w-territory-key:not(:has(details[open]))
+    .w-influence-title {
+    display: none;
+  }
+  .w-map:not([data-focused-segment=""]) .w-territory-key:has(details[open]) {
+    z-index: 9;
+  }
+  .viewport:has(.w-map:not([data-focused-segment=""])) .scene-card {
+    max-width: calc(100% - 100px);
+  }
+  .w-front-name {
+    font-size: clamp(9px, 2.15vw, 12px);
+  }
+  .w-store-owner {
+    padding: 3px;
+    font-size: 10px;
+    gap: 3px;
+  }
+  .w-store-owner .w-faction-badge {
+    width: 13px;
+    height: 14px;
+  }
+  .w-street-unit {
+    font-size: 8px;
+  }
+  .w-store-phase {
+    font-size: 9px;
+    padding: 3px;
   }
 }

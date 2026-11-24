@@ -15,6 +15,7 @@ const integer = (value, min = 0) => Number.isSafeInteger(value) && value >= min;
 const knownType = (value) =>
   typeof value === "string" && Object.hasOwn(TYPES, value);
 const hasTeam = (id) => typeof id === "string" && Object.hasOwn(ALLIANCES, id);
+const knownOwner = (id) => id === "incumbent" || hasTeam(id);
 const list = (value, check) => Array.isArray(value) && value.every(check);
 const unique = (values) => values.length === new Set(values).size;
 const validShop = (id) => shopIds.includes(id);
@@ -47,9 +48,7 @@ function validCampaign(world) {
     !hasTeam(contest.alliance) ||
     contest.alliance !== player.alliance ||
     !["open", "reopened"].includes(contest.previousPhase) ||
-    !(
-      contest.previousOwner === "incumbent" || hasTeam(contest.previousOwner)
-    ) ||
+    !knownOwner(contest.previousOwner) ||
     typeof contest.wonRush !== "boolean"
   )
     return false;
@@ -142,7 +141,7 @@ function validWorld(world) {
         s.id === id &&
         knownType(s.type) &&
         phases.includes(s.phase) &&
-        (s.owner === "incumbent" || hasTeam(s.owner)) &&
+        knownOwner(s.owner) &&
         integer(s.defense) &&
         s.defense <= RULES.maxDefense &&
         (s.staff === undefined || list(s.staff, text)) &&
@@ -154,7 +153,15 @@ function validWorld(world) {
   return (
     list(
       world.events,
-      (e) => record(e) && text(e.kind) && text(e.text) && integer(e.day, 1),
+      (e) =>
+        record(e) &&
+        text(e.kind) &&
+        text(e.text) &&
+        integer(e.day, 1) &&
+        (e.kind !== "capture" ||
+          (validShop(e.shopId) &&
+            (e.previousOwner === undefined || knownOwner(e.previousOwner)) &&
+            (e.owner === undefined || hasTeam(e.owner)))),
     ) &&
     list(
       world.results,
@@ -169,6 +176,7 @@ export function initialView() {
   return {
     scene: "map",
     shopId: "unit01",
+    mapShopId: null,
     loc: null,
     started: false,
     territories: false,
@@ -194,7 +202,25 @@ export function readSave(raw, areas) {
       view.loc = source.loc;
     for (const key of ["started", "territories", "sound"])
       if (typeof source[key] === "boolean") view[key] = source[key];
-    view.started ||= !!data.state.player.alliance || view.scene !== "map";
+    if (view.scene === "shop") {
+      // The actual unit is enough to recover the return route from an older v1 save.
+      view.mapShopId = view.shopId;
+    } else if (view.scene === "map" && !view.loc) {
+      if (validShop(source.mapShopId)) {
+        view.mapShopId = source.mapShopId;
+      } else if (
+        view.territories &&
+        !Object.hasOwn(source, "mapShopId") &&
+        data.state.contest?.status === "won"
+      ) {
+        // Older capture views recorded the campaign and unit, but no map selection.
+        const captured = data.state.shops[data.state.contest.shopId];
+        if (["captured", "voting", "renovating"].includes(captured.phase))
+          view.mapShopId = captured.id;
+      }
+    }
+    view.started ||=
+      !!view.mapShopId || !!data.state.player.alliance || view.scene !== "map";
     return { status: "ready", state: data.state, view };
   } catch {
     return { status: "unreadable" };

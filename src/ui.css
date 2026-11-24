@@ -316,6 +316,10 @@ button {
   max-width: min(338px, calc(100% - 50px));
   pointer-events: none;
 }
+.scene-card > .btn {
+  pointer-events: auto;
+  box-shadow: 0 3px 0 #70448355;
+}
 .field-card {
   pointer-events: auto;
   border: 1.5px solid #a575c7;

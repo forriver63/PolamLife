@@ -111,6 +111,8 @@ test("capturing needs three distinct allies and a rush win in either order", () 
   assert.equal(three.shops.unit01.phase, "captured");
   assert.equal(three.shops.unit01.owner, "trend");
   assert.equal(three.events.filter((e) => e.kind === "capture").length, 1);
+  assert.equal(three.events.at(-1).previousOwner, two.shops.unit01.owner);
+  assert.equal(three.events.at(-1).owner, three.shops.unit01.owner);
   assert.equal(rush(three, true, "duplicate"), three);
   assert.equal(act(three, "INVITE", { memberId: "kit" }), three);
   assert.equal(c.shops.unit01.phase, "contested");
@@ -357,6 +359,7 @@ test("malformed worlds enter recovery while bad view references preserve a valid
     scene: "map",
     loc: null,
     shopId: "unit01",
+    mapShopId: null,
     started: true,
     sound: true,
     territories: false,
@@ -385,6 +388,68 @@ test("malformed worlds enter recovery while bad view references preserve a valid
       "unreadable",
     );
   }
+});
+
+test("street focus survives refresh and old saves return to the correct storefront", () => {
+  const captured = rush(invite(challenge()), true);
+  const loadView = (view, state = captured) => {
+    const result = readSave(JSON.stringify({ state, view }), { central: true });
+    assert.equal(result.status, "ready");
+    assert.deepEqual(result.state, state);
+    return result.view;
+  };
+  // Before street focus existed, a shop save contained only the unit being visited.
+  assert.equal(
+    loadView({ scene: "shop", shopId: "unit06" }).mapShopId,
+    "unit06",
+  );
+  assert.equal(
+    loadView({ scene: "shop", shopId: "unit02", mapShopId: "unit01" })
+      .mapShopId,
+    "unit02",
+  );
+  const map = { scene: "map", territories: true, shopId: "unit02" };
+  assert.equal(loadView(map).mapShopId, captured.contest.shopId);
+  assert.equal(loadView({ ...map, mapShopId: "unit05" }).mapShopId, "unit05");
+  assert.equal(loadView({ ...map, mapShopId: null }).mapShopId, null);
+  assert.equal(loadView({ ...map, mapShopId: "unknown" }).mapShopId, null);
+  assert.equal(
+    loadView({ ...map, mapShopId: "unit03", territories: false }).mapShopId,
+    "unit03",
+  );
+  assert.equal(
+    loadView({ ...map, mapShopId: "unit03", loc: "central" }).mapShopId,
+    null,
+  );
+  assert.equal(
+    loadView({ ...map, scene: "mall", mapShopId: "unit03" }).mapShopId,
+    null,
+  );
+  assert.equal(loadView(map, joined()).mapShopId, null);
+});
+
+test("capture ownership remains on the original event after another challenge; a legacy ledger stays readable", () => {
+  const opened = act(act(cast(ballot()), "CLOSE_VOTE"), "ADVANCE");
+  const next = act(opened, "CHALLENGE", { shopId: "unit02" });
+  assert.equal(next.contest.previousOwner, "comfort");
+  const event = next.events.find((e) => e.kind === "capture");
+  assert.deepEqual(
+    [event.shopId, event.previousOwner, event.owner],
+    ["unit01", "incumbent", "trend"],
+  );
+
+  const legacy = structuredClone(next);
+  const old = legacy.events.find((e) => e.kind === "capture");
+  delete old.previousOwner;
+  delete old.owner;
+  const record = readSave(JSON.stringify({ state: legacy }), {});
+  assert.equal(record.status, "ready");
+  assert.deepEqual(record.state, legacy);
+  old.owner = "unknown";
+  assert.equal(
+    readSave(JSON.stringify({ state: legacy }), {}).status,
+    "unreadable",
+  );
 });
 
 test("each crew can finish its last rival refit and recover every unit from the save", () => {

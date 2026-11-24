@@ -1,4 +1,18 @@
 export const worldText = {
+  "Station Walk": "车站商段",
+  "Park Parade": "公园商段",
+  "Explore Station Walk": "探索车站商段",
+  "Explore Park Parade": "探索公园商段",
+  "Shopping streets in Po Lam": "宝琳的商业街段",
+  "Back to district": "返回街区",
+  District: "街区",
+  "3 storefronts": "三家商铺",
+  "Mixed control": "多方控制",
+  Ours: "我方",
+  "Unified control": "统一控制",
+  "Shops your alliance controls": "我方控制的商铺",
+  "Select a street, then choose a storefront. Colors show each shop’s influence.":
+    "先选择商段，再点击店面。色块示意各铺位的影响范围。",
   "Shop influence legend": "商铺影响图例",
   "Shop influence areas": "商铺影响范围示意",
   "Illustrative shop influence areas in Po Lam": "宝琳商铺影响范围示意",
@@ -54,7 +68,7 @@ export function worldPatterns(s, tr) {
     return "前往" + s.slice(6).split(" · ").map(tr).join(" · ");
   }
   if (
-    /^(?:Unit \d+|Po Lam Estate|Po Tsui Park|Po Lam Station|MCP (?:Central|Discovery|ONE)|Glaze Lane|Pearl Club|Pixel Port|Little Steam|Roll Call|Sunday Coffee|Neighbour Mart) · /.test(
+    /^(?:Unit \d+|Station Walk|Park Parade|Po Lam Estate|Po Tsui Park|Po Lam Station|MCP (?:Central|Discovery|ONE)|Glaze Lane|Pearl Club|Pixel Port|Little Steam|Roll Call|Sunday Coffee|Neighbour Mart) · /.test(
       s,
     )
   ) {

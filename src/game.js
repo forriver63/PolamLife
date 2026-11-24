@@ -159,27 +159,30 @@ export function createGame() {
 }
 
 function log(state, kind, text, shopId = null, memberId = null) {
-  state.events.push({
+  const event = {
     id: "event-" + (state.events.length + 1),
     kind,
     day: state.day,
     text,
     shopId,
     memberId,
-  });
+  };
+  state.events.push(event);
+  return event;
 }
 
 function tryCapture(state) {
   const c = state.contest;
   if (!c.wonRush || c.participants.length < RULES.minParticipants) return;
   const shop = state.shops[c.shopId];
+  const previousOwner = shop.owner;
   shop.phase = "captured";
   shop.owner = c.alliance;
   shop.decorated = false;
   shop.staff = [];
   shop.defense = 1;
   c.status = "won";
-  log(
+  const capture = log(
     state,
     "capture",
     ALLIANCES[c.alliance].name +
@@ -188,6 +191,8 @@ function tryCapture(state) {
       ". Shutters down for a new proposal.",
     shop.id,
   );
+  capture.previousOwner = previousOwner;
+  capture.owner = shop.owner;
 }
 
 // Each accepted action produces a complete, serializable world snapshot. A rejected action

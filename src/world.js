@@ -1,5 +1,6 @@
 import { ALLIANCES, TYPES } from "./game.js";
 import { icon } from "./icons.js";
+import { shopStreet, STREETS } from "./streets.js";
 
 // Positions are percentages of the *illustration*, so labels follow the buildings at every zoom.
 const LANDMARKS = [
@@ -200,10 +201,10 @@ function walkTo(person, location) {
   });
 }
 
-function mapLayer(board, state, territories, onLocation, onShop) {
+function mapLayer(board, state, territories, onLocation, onShop, selectStreet) {
   const focus = districtFocusShop(state);
   const latest = lastCapture(state);
-  if (territories) board.append(territoryOverlay(state, latest, onShop));
+  board.append(territoryOverlay(state, latest, territories, selectStreet));
   const [startX, startY] = WALKWAYS[memory.location].at(-1);
   addPerson(board, "kit", 78.1, 64.3, "", "w-local-person w-central-walk");
   addPerson(board, "jo", 24.4, 39.8, "", "w-local-person w-park-walk");
@@ -219,7 +220,8 @@ function mapLayer(board, state, territories, onLocation, onShop) {
   const signType = isShut(focus) ? "renovating" : focus.type;
   const rooftop = hotspot(
     "Visit " + TYPES[focus.type].shopName + " · " + phaseText(focus),
-    () => onShop?.(focus.id),
+    () =>
+      territories ? selectStreet(shopStreet(focus.id)) : onShop?.(focus.id),
     "w-rooftop",
   );
   rooftop.title = isShut(focus) ? phaseText(focus) : TYPES[focus.type].shopName;
@@ -234,7 +236,9 @@ function mapLayer(board, state, territories, onLocation, onShop) {
       place.name + " · " + place.local,
       () => {
         walkTo(avatar, place.id);
-        onLocation?.(place.id);
+        if (territories && (place.id === "park" || place.id === "station"))
+          selectStreet(place.id);
+        else onLocation?.(place.id);
       },
       "w-place" + (main ? " w-place-main" : ""),
     );
@@ -273,49 +277,6 @@ function mapLayer(board, state, territories, onLocation, onShop) {
 
 // Influence is a schematic catchment for each shop, registered to the original
 // 1000 × 750 district canvas. Shared polylines trace arterial roads and local streets.
-const DOMAINS = [
-  [
-    { unit: "unit02", x: 168, y: 211 },
-    { unit: "unit05", x: 467, y: 188 },
-    { unit: "unit06", x: 810, y: 239 },
-  ],
-  [
-    { unit: "unit04", x: 212, y: 554 },
-    { unit: "unit01", x: 448, y: 506 },
-    { unit: "unit03", x: 767, y: 575 },
-  ],
-];
-const EAST_WEST = [
-  [
-    "22,148 77,126 132,110 197,93 262,81 326,73 380,68",
-    "380,68 445,67 499,74 554,88 611,118 653,154 686,208",
-    "686,208 727,172 768,148 784,115 817,97 842,78 859,36",
-  ],
-  [
-    "76,366 114,396 164,425 222,451 270,476 319,500",
-    "319,500 352,478 400,438 446,403 491,370",
-    "491,370 534,349 562,337 592,333 625,343 649,355 681,344 728,324 751,354 781,396 814,430 850,449",
-  ],
-  [
-    "18,628 80,633 156,634 228,646 288,653 350,666 423,686",
-    "423,686 470,673 519,649 578,623 622,601 655,586",
-    "655,586 682,610 708,647 742,684 759,708 828,716 894,707 947,695",
-  ],
-];
-const NORTH_SOUTH = [
-  [
-    "22,148 12,187 17,226 26,267 41,308 57,341 76,366",
-    "380,68 379,120 365,143 349,157 315,164 276,190 258,238 262,273 248,312 264,337 288,350 294,385 321,414 349,433 355,465 319,500",
-    "686,208 651,243 623,273 590,302 546,336 491,370",
-    "859,36 893,84 922,124 948,166 956,201 935,239 908,265 888,301 887,341 899,371 871,410 850,449",
-  ],
-  [
-    "76,366 58,390 36,417 22,451 30,484 21,519 32,558 15,596 18,628",
-    "319,500 343,540 370,582 394,622 411,653 423,686",
-    "491,370 516,392 550,436 582,481 623,535 655,586",
-    "850,449 875,485 912,532 950,578 985,614 972,659 947,695",
-  ],
-];
 const INFLUENCE_INK = {
   trend: "#14acac",
   comfort: "#f16f57",
@@ -344,159 +305,265 @@ function factionBadge(owner) {
   return badge;
 }
 
-function domainLabel(shop, x, y, latest) {
-  const name = TYPES[shop.type].shopName;
-  const width = name.length >= 12 ? 148 : 130;
-  const label = svgNode("g", {
-    class: "w-domain-label",
-    transform: `translate(${x - (width - 130) / 2} ${y})`,
-  });
-  const color = ownerColor(shop.owner);
-  label.append(
-    svgNode("rect", {
-      x: -65,
-      y: -17,
-      width,
-      height: 35,
-      rx: 5,
-      fill: "#322339",
-      stroke: color,
-      "stroke-width": 1.7,
-    }),
-  );
-  label.append(
-    svgNode("path", { d: "M-65 -16 H-37 V6 L-51 18 -65 6Z", fill: color }),
-  );
-  const sigil = svgNode("g", {
-    transform: "translate(-60 -10)",
-    color: "#342337",
-  });
-  sigil.innerHTML = icon(FACTIONS[shop.owner].symbol, 18);
-  label.append(sigil);
-  label.append(
-    svgNode(
-      "text",
-      { class: "w-domain-unit", x: -30, y: -3 },
-      "Unit " + shop.id.slice(-2),
-    ),
-    svgNode("text", { class: "w-domain-name", x: -30, y: 11 }, name),
-  );
-  if (latest) {
-    const star = svgNode("g", {
-      class: "w-claim-stamp",
-      transform: `translate(${width - 71} -15)`,
-    });
-    star.append(
-      svgNode("circle", { r: 9 }),
-      svgNode("path", {
-        d: "M0 -6 1.8 -1.8 6 0 1.8 1.8 0 6 -1.8 1.8 -6 0 -1.8 -1.8Z",
-      }),
-    );
-    label.append(star);
-  }
-  const miniature = svgNode("g", { class: "w-domain-mini" });
-  miniature.append(
-    svgNode("rect", {
-      x: -19,
-      y: -9,
-      width: 38,
-      height: 18,
-      rx: 4,
-      fill: "#322339",
-      stroke: latest ? "#ffe69b" : color,
-      "stroke-width": latest ? 2.5 : 1.5,
-    }),
-  );
-  const crest = svgNode("g", { transform: "translate(-16 -6)", color });
-  crest.innerHTML = icon(FACTIONS[shop.owner].symbol, 12);
-  miniature.append(crest, svgNode("text", { x: -1, y: 4 }, shop.id.slice(-2)));
-  label.append(miniature);
-  return label;
+function ownedOnStreet(state, street) {
+  return street.units.filter(
+    ({ id }) => state.shops[id].owner === state.player.alliance,
+  ).length;
 }
 
-function territoryOverlay(state, lastClaim, onShop) {
+function segmentMarker(street, state) {
+  const [x, y] = street.marker;
+  const marker = svgNode("g", {
+    class: "w-segment-marker",
+    transform: `translate(${x} ${y})`,
+  });
+  const sign = svgNode("g", { class: "w-segment-sign" });
+  sign.append(
+    svgNode("rect", { x: -79, y: -19, width: 158, height: 38, rx: 8 }),
+  );
+  const image = svgNode("image", {
+    href: "assets/world/" + street.icon + ".png",
+    x: -73,
+    y: -12,
+    width: 24,
+    height: 24,
+  });
+  const count = ownedOnStreet(state, street);
+  sign.append(
+    image,
+    svgNode("text", { x: -44, y: -2, class: "w-segment-name" }, street.name),
+    svgNode("text", { x: -44, y: 12, class: "w-segment-sub" }, "3 storefronts"),
+  );
+  const tally = state.player.alliance ? count + "/3" : "›";
+  sign.append(
+    svgNode(
+      "text",
+      { x: 69, y: 5, class: "w-segment-tally", "text-anchor": "end" },
+      tally,
+    ),
+  );
+  marker.append(sign);
+  return marker;
+}
+
+function drawBorder(overlay, points, kind, units) {
+  if (kind !== "internal")
+    overlay.append(svgNode("polyline", { class: "w-line-casing", points }));
+  overlay.append(
+    svgNode("polyline", {
+      class: "w-domain-line",
+      points,
+      "data-edge": kind,
+      "data-border-units": units.sort().join(" "),
+    }),
+  );
+}
+
+function territoryOverlay(state, lastClaim, territories, selectStreet) {
   const svg = svgNode("svg", {
     viewBox: "0 0 1000 750",
-    class: "w-territories",
+    class: "w-commerce-map" + (territories ? " w-territories" : ""),
     role: "group",
-    "aria-label": "Illustrative shop influence areas in Po Lam",
+    "aria-label": "Shopping streets in Po Lam",
   });
-  const edges = new Map();
-  for (const [row, domains] of DOMAINS.entries()) {
-    for (const [col, { unit, x, y }] of domains.entries()) {
-      const shop = state.shops[unit];
-      const claimed = lastClaim?.shopId === unit;
-      const info = [
-        "Unit " + unit.slice(-2),
-        TYPES[shop.type].shopName,
-        ownerName(shop.owner),
-        phaseText(shop),
-      ];
-      if (claimed) info.push("Latest capture");
+  const zones = svgNode("g"),
+    borders = svgNode("g");
+  for (const [key, street] of Object.entries(STREETS)) {
+    const group = svgNode("g", {
+      class: "w-segment-zone",
+      "data-map-segment": key,
+      role: "button",
+      tabindex: "0",
+      "aria-label": "Explore " + street.name,
+    });
+    for (const [i, { id, door }] of street.units.entries()) {
+      const next = (i + 1) % 3,
+        prev = (i + 2) % 3,
+        shop = state.shops[id],
+        other = state.shops[street.units[prev].id];
+      const perimeter = [
+        street.outer[i],
+        street.arms[next],
+        street.arms[i].split(" ").reverse().join(" "),
+      ].join(" ");
       const tile = svgNode("g", {
         class: "w-domain",
-        role: "button",
-        tabindex: "0",
-        "aria-label": info.join(" · "),
-        "data-territory-unit": unit,
+        "data-territory-unit": id,
         "data-owner": shop.owner,
         "data-phase": shop.phase,
       });
-      tile.append(svgNode("title", {}, info.join(" · ")));
-      if (claimed) tile.setAttribute("data-latest-capture", "");
-      const sides = [
-        EAST_WEST[row][col],
-        NORTH_SOUTH[row][col + 1],
-        EAST_WEST[row + 1][col],
-        NORTH_SOUTH[row][col],
-      ];
-      const perimeter = sides
-        .flatMap((side, index) => {
-          const points = side.split(" ");
-          edges.set(side, [...(edges.get(side) || []), shop.owner]);
-          return index < 2 ? points : points.reverse();
-        })
-        .join(" ");
       tile.append(
+        svgNode(
+          "title",
+          {},
+          street.name +
+            " · " +
+            TYPES[shop.type].shopName +
+            " · " +
+            ownerName(shop.owner) +
+            (lastClaim?.shopId === id ? " · Latest capture" : ""),
+        ),
         svgNode("polygon", {
           class: "w-domain-fill",
           points: perimeter,
           fill: INFLUENCE_INK[shop.owner],
         }),
       );
-      if (claimed)
-        tile.append(
-          svgNode("polygon", { class: "w-claim-outline", points: perimeter }),
-        );
-      tile.append(domainLabel(shop, x, y, claimed));
-      tile.addEventListener("click", () => onShop?.(unit));
-      tile.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onShop?.(unit);
-        }
+      const pin = svgNode("g", {
+        class: "w-overview-unit",
+        transform: `translate(${door[0]} ${door[1]})`,
       });
-      svg.append(tile);
+      pin.append(
+        svgNode("circle", { r: 11, fill: ownerColor(shop.owner) }),
+        svgNode("text", { y: 3.5 }, id.slice(-2)),
+      );
+      tile.append(pin);
+      if (lastClaim?.shopId === id) {
+        tile.setAttribute("data-latest-capture", "");
+        pin.prepend(svgNode("circle", { class: "w-claim-ring", r: 15 }));
+      }
+      group.append(tile);
+      drawBorder(borders, street.outer[i], "perimeter", [id]);
+      drawBorder(
+        borders,
+        street.arms[i],
+        other.owner === shop.owner ? "internal" : "border",
+        [id, other.id],
+      );
+    }
+    const activate = () => selectStreet(key);
+    group.addEventListener("click", activate);
+    group.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        activate();
+      }
+    });
+    group.append(segmentMarker(street, state));
+    zones.append(group);
+  }
+  // Paint the road borders below the clickable signs and unit badges.
+  svg.append(borders, zones);
+  return svg;
+}
+
+function streetFront(state, shop, point, onShop) {
+  const type = isShut(shop) ? "renovating" : shop.type;
+  const name = TYPES[shop.type].shopName,
+    phase = phaseText(shop);
+  const door = hotspot(
+    ["Unit " + shop.id.slice(-2), name, ownerName(shop.owner), phase].join(
+      " · ",
+    ),
+    () => onShop?.(shop.id),
+    "w-map-store",
+  );
+  Object.assign(door.dataset, {
+    mapStore: shop.id,
+    owner: shop.owner,
+    type,
+    phase: shop.phase,
+  });
+  door.style.setProperty("--w-owner", ownerColor(shop.owner));
+  at(door, point[0] / 10, point[1] / 7.5);
+  const top = el("span", "w-street-unit", "Unit " + shop.id.slice(-2));
+  const shopfront = el("span", "w-map-front");
+  const art = el("img", "w-map-frontart");
+  art.src = "assets/world/front-" + type + ".webp";
+  art.width = 230;
+  art.height = 116;
+  art.alt = "";
+  art.draggable = false;
+  shopfront.append(art, el("strong", "w-front-name", name));
+  const info = el("span", "w-store-owner");
+  info.append(
+    factionBadge(shop.owner),
+    el("b", "", FACTIONS[shop.owner].short),
+  );
+  door.append(top, shopfront, info);
+  const status = el("span", "w-store-phase");
+  if (shop.phase !== "open")
+    status.append(el("i"), document.createTextNode(phase));
+  if (shop.phase === "renovating" && state.renovation?.shopId === shop.id)
+    status.append(
+      document.createTextNode(" · "),
+      el("span", "", TYPES[state.renovation.toType].shopName),
+    );
+  if (status.childNodes.length) door.append(status);
+  return door;
+}
+
+function streetHud(state, key, selectStreet) {
+  const street = STREETS[key],
+    hud = el("section", "w-segment-hud");
+  hud.setAttribute("aria-label", street.name);
+  const nav = el("div", "w-segment-nav");
+  const back = hotspot(
+    "Back to district",
+    () => selectStreet(null),
+    "w-street-back",
+  );
+  back.dataset.segmentBack = "";
+  back.innerHTML = icon("back", 15);
+  back.append(el("span", "", "District"));
+  const other = key === "park" ? "station" : "park";
+  const swap = hotspot(
+    "Explore " + STREETS[other].name,
+    () => selectStreet(other),
+    "w-street-switch",
+  );
+  swap.dataset.switchSegment = other;
+  swap.append(el("span", "", STREETS[other].name));
+  swap.insertAdjacentHTML("beforeend", icon("arrow", 15));
+  nav.append(back, swap);
+  const headline = el("div", "w-street-headline");
+  headline.append(sprite(street.icon), el("strong", "", street.name));
+  const owners = new Set(street.units.map(({ id }) => state.shops[id].owner));
+  headline.append(
+    el(
+      "small",
+      "w-street-mix",
+      owners.size > 1 ? "Mixed control" : "Unified control",
+    ),
+  );
+  if (state.player.alliance) {
+    const total = ownedOnStreet(state, street);
+    const count = el("b", "w-street-count", total + " / 3");
+    count.dataset.segmentCount = total;
+    const holdings = el("span", "w-street-holdings");
+    holdings.title = "Shops your alliance controls";
+    holdings.append(el("small", "", "Ours"), count);
+    headline.append(holdings);
+    const event = state.events.findLast(
+      (e) => e.kind === "capture" && shopStreet(e.shopId) === key,
+    );
+    if (event && state.shops[event.shopId].owner === state.player.alliance) {
+      const prior =
+        event.previousOwner ||
+        (state.contest?.status === "won" &&
+        state.contest.shopId === event.shopId
+          ? state.contest.previousOwner
+          : null);
+      const change = el("div", "w-street-change");
+      change.dataset.segmentChange = event.shopId;
+      change.append(el("b", "", "Unit " + event.shopId.slice(-2)));
+      if (prior && FACTIONS[prior])
+        change.append(
+          el(
+            "span",
+            "",
+            FACTIONS[prior].short +
+              " → " +
+              FACTIONS[state.player.alliance].short,
+          ),
+        );
+      change.append(el("strong", "", total - 1 + "/3 → " + total + "/3"));
+      hud.append(nav, headline, change);
+      return hud;
     }
   }
-  for (const [points, owners] of edges) {
-    const boundary =
-      owners.length === 1
-        ? "perimeter"
-        : owners[0] === owners[1]
-          ? "internal"
-          : "border";
-    if (boundary !== "internal")
-      svg.append(svgNode("polyline", { class: "w-line-casing", points }));
-    svg.append(
-      svgNode("polyline", {
-        class: "w-domain-line",
-        points,
-        "data-edge": boundary,
-      }),
-    );
-  }
-  return svg;
+  hud.append(nav, headline);
+  return hud;
 }
 
 function territoryKey(state) {
@@ -539,7 +606,7 @@ function territoryKey(state) {
     el(
       "p",
       "",
-      "Colors show illustrative shop influence. Select an area to enter its shop.",
+      "Select a street, then choose a storefront. Colors show each shop’s influence.",
     ),
   );
   key.append(details);
@@ -639,7 +706,7 @@ function shopLayer(board, state, shop) {
   }
 }
 
-// Cover the viewport without distorting the painting. In narrow views panning exposes its edges.
+// Keep the map's 4:3 aspect ratio, with independent district and storefront framing.
 function configureCamera(host, board, img, interactive, scene) {
   const model =
     scene === "map" && memory.map ? { ...memory.map } : { k: 1, x: 0, y: 0 };
@@ -648,6 +715,7 @@ function configureCamera(host, board, img, interactive, scene) {
     vw = 1,
     vh = 1,
     minimumZoom = 1;
+  let focusedStreet = null;
   function draw() {
     const limitX = Math.max(0, (w * model.k - vw) / 2, ((model.k - 1) * w) / 2);
     const limitY = Math.max(0, (h * model.k - vh) / 2, ((model.k - 1) * h) / 2);
@@ -662,12 +730,30 @@ function configureCamera(host, board, img, interactive, scene) {
       model.k +
       ")";
     board.style.setProperty("--w-counter-zoom", Math.min(1, 1 / model.k));
+    board.style.setProperty("--w-store-counter", 1 / model.k);
     if (scene === "map") {
       const screenScale = (w * model.k) / 1000;
       host.classList.toggle("w-map-overview", screenScale < 0.58);
       board.style.setProperty("--w-mini-scale", 1 / screenScale);
     }
-    if (scene === "map") memory.map = { ...model };
+    if (scene === "map" && !focusedStreet) {
+      model.overviewWidth = vw;
+      memory.map = { ...model };
+    }
+  }
+  function frameDistrict() {
+    model.k = minimumZoom;
+    model.x = 0;
+    model.y = 0;
+    if (scene !== "map" || vw >= 590) return;
+    // Compact street signs are 98 screen pixels wide. Split the remaining
+    // space between their two centers, leaving a margin on both sides.
+    const west = STREETS.park.marker[0];
+    const east = STREETS.station.marker[0];
+    const separation = Math.min(vw * 0.61, vw - 98 - 20);
+    const districtWidth = (1000 * separation) / (east - west);
+    model.k = Math.max(minimumZoom, Math.min(1, districtWidth / w));
+    model.x = (0.5 - (west + east) / 2000) * w * model.k;
   }
   function fit() {
     vw = host.clientWidth || 1;
@@ -692,6 +778,8 @@ function configureCamera(host, board, img, interactive, scene) {
     model.k = Math.max(minimumZoom, model.k);
     board.style.width = w + "px";
     board.style.height = h + "px";
+    if (focusedStreet) frameStreet();
+    else if (scene === "map" && model.overviewWidth !== vw) frameDistrict();
     draw();
   }
   const abort = new AbortController();
@@ -709,9 +797,43 @@ function configureCamera(host, board, img, interactive, scene) {
     draw();
     return model.k;
   };
+  function frameStreet() {
+    const points = STREETS[focusedStreet].units.map((unit) => unit.door);
+    const xs = points.map((point) => point[0]),
+      ys = points.map((point) => point[1]);
+    const left = Math.min(...xs),
+      right = Math.max(...xs),
+      top = Math.min(...ys),
+      bottom = Math.max(...ys);
+    const narrow = vw < 600;
+    const doorWidth = narrow
+      ? Math.max(89, Math.min(122, vw * 0.31))
+      : Math.max(135, Math.min(205, vw * 0.15));
+    const scale = Math.min(
+      2.35,
+      (vw - doorWidth - (narrow ? 18 : 65)) / (right - left),
+      (vh - doorWidth * 0.87 - (narrow ? 174 : 165)) / (bottom - top),
+    );
+    model.k = Math.max(minimumZoom, Math.min(2.4, (scale * 1000) / w));
+    model.x = (0.5 - (left + right) / 2000) * w * model.k;
+    model.y = (0.5 - (top + bottom) / 1500) * h * model.k + doorWidth * 0.18;
+    board.style.setProperty("--w-store-width", doorWidth + "px");
+  }
+  function selectStreet(key) {
+    if (key === focusedStreet) return;
+    focusedStreet = key;
+    if (key) frameStreet();
+    else if (vw < 590 || memory.map?.overviewWidth !== vw) frameDistrict();
+    else Object.assign(model, memory.map);
+    draw();
+  }
   function reset() {
-    model.k = 1;
-    model.x = model.y = 0;
+    if (focusedStreet) {
+      frameStreet();
+      draw();
+      return;
+    }
+    frameDistrict();
     draw();
   }
   if (interactive) {
@@ -849,6 +971,7 @@ function configureCamera(host, board, img, interactive, scene) {
   return {
     zoom,
     reset,
+    selectStreet,
     dispose() {
       observer.disconnect();
       abort.abort();
@@ -883,6 +1006,8 @@ export function mountWorld(
     territories = false,
     onLocation,
     onShop,
+    mapShopId = null,
+    onMapShopFocus,
   },
 ) {
   mapViews.get(container)?.();
@@ -919,7 +1044,53 @@ export function mountWorld(
           (isShut(shop) ? "renovating" : shop.type) +
           ".webp";
   board.append(img);
-  if (scene === "map") mapLayer(board, state, territories, onLocation, onShop);
+  let camera,
+    focusedKey = null;
+  function focusStreet(key, notify = true) {
+    if (key === focusedKey && host.dataset.focusedSegment !== undefined) return;
+    focusedKey = key;
+    host.dataset.focusedSegment = key || "";
+    board.querySelectorAll(".w-map-store").forEach((node) => node.remove());
+    host.querySelector(".w-segment-hud")?.remove();
+    for (const zone of board.querySelectorAll("[data-map-segment]")) {
+      zone.setAttribute(
+        "aria-pressed",
+        String(zone.dataset.mapSegment === key),
+      );
+      zone.setAttribute("tabindex", key === null ? "0" : "-1");
+    }
+    if (key) {
+      for (const { id, door } of STREETS[key].units) {
+        const store = streetFront(state, state.shops[id], door, onShop);
+        if (lastCapture(state)?.shopId === id)
+          store.setAttribute("data-recent-store", "");
+        if (id === (notify ? STREETS[key].home : mapShopId)) {
+          store.setAttribute("aria-current", "true");
+          store.dataset.focusedStore = id;
+        }
+        board.append(store);
+      }
+      host.append(streetHud(state, key, focusStreet));
+    }
+    camera?.selectStreet(key);
+    if (notify) {
+      onMapShopFocus?.(key ? STREETS[key].home : null);
+      if (key)
+        host
+          .querySelector("[data-segment-back]")
+          ?.focus({ preventScroll: true });
+      else
+        board
+          .querySelector(
+            '[data-map-segment="' + (lastStreet || "station") + '"]',
+          )
+          ?.focus({ preventScroll: true });
+    }
+    if (key) lastStreet = key;
+  }
+  let lastStreet = null;
+  if (scene === "map")
+    mapLayer(board, state, territories, onLocation, onShop, focusStreet);
   else if (scene === "mall") mallLayer(board, state, territories, onShop);
   else shopLayer(board, state, shop);
   host.append(board);
@@ -928,8 +1099,11 @@ export function mountWorld(
     host.classList.add("w-influence-on");
     host.append(territoryKey(state));
   }
-  const camera = configureCamera(host, board, img, movable, scene);
-  if (scene === "map") addControls(host, camera);
+  camera = configureCamera(host, board, img, movable, scene);
+  if (scene === "map") {
+    addControls(host, camera);
+    focusStreet(shopStreet(mapShopId) || null, false);
+  }
   const clean = () => {
     camera.dispose();
     host.remove();

@@ -158,15 +158,17 @@ function toast(msg) {
   noticeTimer = setTimeout(() => el.classList.remove("show"), 3200);
 }
 function go(scene, id) {
+  if ((scene === "shop" || id != null) && !Object.hasOwn(state.shops, id))
+    return;
   modal = "";
   view.scene = scene;
   view.loc = null;
+  view.mapShopId = id ?? null;
   if (scene !== "map") view.started = true;
   if (scene === "shop") {
     view.shopId = id;
     act("VISIT", { shopId: id });
-  }
-  persist();
+  } else persist();
   render();
 }
 function start() {
@@ -193,7 +195,8 @@ function card(kicker, title, desc, actions, extra = "", cls = "") {
 }
 function sceneCard() {
   const s = shop(),
-    t = districtFocusShop(state),
+    focusedShop = view.scene === "map" ? state.shops[view.mapShopId] : null,
+    t = focusedShop || districtFocusShop(state),
     joined = !!team();
   const allOwned =
     joined &&
@@ -204,7 +207,8 @@ function sceneCard() {
     );
   if (
     allOwned &&
-    ((view.scene === "map" && !view.loc) || view.scene === "mall")
+    ((view.scene === "map" && !view.loc && !focusedShop) ||
+      view.scene === "mall")
   )
     return card(
       "MCP CENTRAL · SIX ALLIANCE SHOPS",
@@ -213,7 +217,7 @@ function sceneCard() {
       btn("daily", "Read the Daily", "primary", "paper") +
         btn("confirmReset", "New game", "link", "reset"),
     );
-  if (!view.started && !view.loc)
+  if (!view.started && !view.loc && !focusedShop)
     return card(
       "NEIGHBORHOOD FIELD GUIDE",
       "Welcome to<br><em>Po Lam.</em>",
@@ -239,6 +243,26 @@ function sceneCard() {
       );
     }
     if (!view.started) return "";
+    if (focusedShop) {
+      const nextAction = {
+        captured: ["propose", "Open alliance ballot", "primary", "paper"],
+        voting: ["voting", "View alliance ballot", "primary", "paper"],
+        renovating: ["advance", "Advance to next day", "primary", "next"],
+      }[t.phase];
+      const returnButton = btn("focusShop", "Return to " + unit(t), "secondary", "shop");
+      // A street marker frames three doors. Only offer a shortcut back to
+      // a door the player actually visited, or to the current refit.
+      if (!nextAction)
+        return t.id === view.shopId && state.visits[t.id] > 0 ? returnButton : "";
+      return card(
+        unit(t).toUpperCase() + " · " + phaseNames[t.phase].toUpperCase(),
+        noun(t.type),
+        "Held by " + owner(t),
+        btn(...nextAction) + returnButton,
+        "",
+        "compact",
+      );
+    }
     if (["contested", "captured", "voting", "renovating"].includes(t.phase)) {
       const copy = {
         contested: "Your crew has challenged " + noun(t.type) + ".",
@@ -269,7 +293,7 @@ function sceneCard() {
       state.history.length
         ? "A new day in Po Lam"
         : joined
-          ? "Meet at MCP Central"
+          ? "Choose a shopping street"
           : "A stop before class",
       state.history.length
         ? noun(state.history.at(-1).toType) +
@@ -277,9 +301,9 @@ function sceneCard() {
             noun(state.history.at(-1).fromType) +
             "."
         : joined
-          ? "Your crew has a foothold in the mall. Find Glaze Lane in the atrium."
+          ? "Tap a street sign to see its three shops. Glaze Lane is on Station Walk."
           : "A donut counter sits along the station walkway. Take a look inside.",
-      btn("mall", "Explore MCP Central"),
+      btn("mall", "Explore MCP Central", joined ? "secondary" : "primary"),
       joined
         ? `<span class="team-tag">${icon(teamIcons[state.player.alliance], 14)} ${team().name}</span>`
         : "",
@@ -300,7 +324,8 @@ function sceneCard() {
       "YOUR FIRST STOP · " + unit(s).toUpperCase(),
       noun(s.type),
       "A donut on the way to class? Maybe you’d rather have milk tea. Pick the stops you wish were here.",
-      btn("prefs", "Choose your favorites"),
+      btn("prefs", "Choose your favorites") +
+        btn("returnToStreet", "Back to shopping street", "link", "map"),
     );
   let desc = "",
     actions = "",
@@ -344,7 +369,10 @@ function sceneCard() {
     caption,
     title,
     desc,
-    actions,
+    actions +
+      (s.phase === "captured"
+        ? ""
+        : btn("returnToStreet", "Back to shopping street", "link", "map")),
     `<span class="team-tag">${icon(teamIcons[s.owner] || "flag", 14)} ${owner(s)}</span>`,
     s.phase === "reopened" ? "opening-card" : "compact",
   );
@@ -369,19 +397,45 @@ function render() {
  <main class="viewport"><div id="world"></div><div class="world-top"><div class="district-tag"><span class="tag-symbol">${icon(map ? "map" : mall ? "shop" : "pin", 22)}</span><span><small>${map ? "DISTRICT MAP" : mall ? "SHOPPING MALL" : unit(shop()).toUpperCase() + " · INTERIOR"}</small><strong>${map ? "Digital Po Lam" : location}</strong></span></div>${map ? `<button class="layer-btn ${view.territories ? "on" : ""}" data-do="layers" aria-pressed="${view.territories}">${icon("layers", 16)} Territories <i></i></button>` : `<button class="layer-btn" data-do="${mall ? "map" : "mall"}">${icon("back", 16)} ${mall ? "District map" : "Mall atrium"}</button>`}</div>
  <section class="scene-card" aria-label="Current objective">${sceneCard()}</section><div id="effects" aria-hidden="true"></div></main></div>
  <footer class="statusbar"><span class="district-code"><i></i> PL / ${map ? "DISTRICT 01" : mall ? "MCP CENTRAL" : unit(shop()).toUpperCase()}</span><span class="foot-location">${icon("pin", 13)} ${map ? "Tseung Kwan O, Hong Kong" : "Po Lam · " + location}</span><span class="foot-tip">${icon(map ? "move" : "cursor", 13)} ${map ? "Drag to pan · Scroll to zoom" : mall ? "Select a storefront" : "Shop interior"}</span><span class="save-status">${icon("check", 13)} ${saveError ? "Session only" : "Local save"}</span></footer><div id="overlay"></div>`;
-  worldCleanup = mountWorld(document.querySelector("#world"), {
+  const worldElement = document.querySelector("#world");
+  worldCleanup = mountWorld(worldElement, {
     state,
     scene: view.scene,
     shopId: view.shopId,
     territories: view.territories,
+    mapShopId: view.mapShopId,
+    onMapShopFocus: (id) => {
+      if (
+        !worldElement.isConnected ||
+        modal ||
+        view.scene !== "map" ||
+        (id !== null && !Object.hasOwn(state.shops, id))
+      )
+        return;
+      if (view.mapShopId === id && !view.loc) return;
+      view.mapShopId = id;
+      view.loc = null;
+      if (id !== null) view.started = true;
+      persist();
+      document.querySelector(".scene-card").innerHTML = sceneCard();
+    },
     onLocation: (id) => {
-      if (!areas[id]) return;
+      if (!worldElement.isConnected || modal || !Object.hasOwn(areas, id))
+        return;
       view.loc = id;
+      view.mapShopId = null;
       sound();
       persist();
       document.querySelector(".scene-card").innerHTML = sceneCard();
     },
     onShop: (id) => {
+      if (
+        !worldElement.isConnected ||
+        modal ||
+        view.scene === "shop" ||
+        !Object.hasOwn(state.shops, id)
+      )
+        return;
       sound();
       go("shop", id);
     },
@@ -787,15 +841,21 @@ function action(id) {
       go("map");
       break;
     case "territoryMap":
+      if (state.contest?.status !== "won") return;
       view.territories = true;
-      go("map");
+      go("map", state.contest.shopId);
+      break;
+    case "returnToStreet":
+      if (view.scene !== "shop") return;
+      go("map", view.shopId);
       break;
     case "mall":
       view.started = true;
       go("mall");
       break;
     case "focusShop":
-      go("shop", districtFocusShop(state).id);
+      if (!["map", "mall"].includes(view.scene)) return;
+      go("shop", view.mapShopId ?? districtFocusShop(state).id);
       break;
     case "prefs":
       showPrefs();
@@ -810,7 +870,7 @@ function action(id) {
       if (act("JOIN", { alliance: selectedTeam })) {
         view.territories = true;
         go("map");
-        toast("Joined " + team().name + " · meet your crew at MCP Central.");
+        toast("Joined " + team().name + " · choose a street on the map.");
       }
       break;
     case "layers":
