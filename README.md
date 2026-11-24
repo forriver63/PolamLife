@@ -68,7 +68,7 @@ flowchart LR
 | 0:00 | 点 **Enter Po Lam**，进入 Glaze Lane，点 **Choose your favorites**。按顺序选 **Bubble Tea Shop → Gaming Store → Café**，点 **Find my alliance**，选推荐的 **The Trendsetters → Join alliance**。 | 地图自动显示势力图。该联盟起初掌握六个铺位中的一个。 |
 | 0:45 | 点击 **MCP Central → Enter the mall**，进地面层的 **Glaze Lane**。选择 **Scout this shop → Launch a challenge → Invite allies**。 | Mina 和 Kit 有独立身份、到场记录和岗位。接单助手能补救一次错单，队列管理员多争取 4 秒。 |
 | 1:30 | 点 **Play shop rush → Start shift**，读订单，点击相应商品，或按数字键 1–3。基准目标为五张订单。 | 三次未补救的错误或超时会让守方保住店铺，可以重新挑战。人数不足时，即便清完订单也不能占领。 |
-| 2:10 | 占领后点 **View territory change**。在势力图上点击刚易主的 **Unit 01**，回店点 **Open alliance ballot**。 | 旧店此刻落闸，铺位从原属街机公会变成潮流派颜色，我方变为 **2 / 6**。地图的商铺边界与图例按六个可玩的虚构铺位计算。 |
+| 2:10 | 占领后点 **View territory change**。在宝琳地图上点击刚易主的 **Unit 01**，回店点 **Open alliance ballot**。 | 旧店此刻落闸，地图上对应的影响区换成潮流派颜色，我方变为 **2 / 6**。计数按六个可玩的虚构铺位计算。 |
 | 2:40 | 选 **Bubble Tea Shop**，等两位模拟盟友投票，点 **Count the votes**。 | 经典路线中 Mina 选奶茶，Kit 选电玩，奶茶以 2:1 胜出。这条路线改投咖啡会出现 1:1:1 平票，奶茶按候选顺序胜出。开票后才开始装修，此时刷新仍应停在装修阶段。 |
 | 3:10 | 点 **Advance to next day**。进新开业的 Pearl Club，再返回商场与街区地图。 | 同一个铺位换了招牌、门面、设备和商品，原来的联盟归属继续保留。 |
 | 3:40 | 打开 **Daily** 对照改造前后，再看 **Insights**。 | 日报记录这次开业。洞察分别标出本人选择、游戏到访、模拟票和待验证的现实问题。 |
@@ -77,11 +77,13 @@ flowchart LR
 
 ## 势力图与美术
 
-势力图以 MCP Central 两层的六个可玩铺位为边界。色块、阵营徽记和图例共同表示归属，星标标出最近一次占领。点击任一地块可进入对应店铺。**Territories / 势力图** 可切回街区探索。占领当刻就会扩张领地，次日开业改变的是该地块的店型。屋邨和车站是地标。
+打开 **Territories / 势力图**，阵营色块会直接叠在宝琳街道和建筑上，随地图平移、缩放。每块代表 MCP Central 一家虚构店铺在街区的示意影响范围。店铺归属来自存档，分区边界是为演示绘制的。点击地块即可进入对应店铺。占领成功后，同一块地立即换上新联盟的颜色与徽记，并标出最近一次占领。次日开业才换店型。屋邨、车站等公共地标仍可点击。
 
-![占领甜甜圈店后，同一张宝琳地图显示中文地标、六个铺位的归属和我方最新领地](docs/screenshots/16-territory-zh.jpg)
+手机上可以拖动色块平移地图，轻点进入店铺。连续点减号或双指收拢可查看整幅街区，远景用徽记和铺号标注六片影响区。
 
-[查看占领前的地图](docs/screenshots/04-district-map.jpg) · [查看英文势力图](docs/screenshots/15-territory-capture.jpg)
+![占领甜甜圈店后，宝琳原图上的街区变色，星标指出潮流派赢下的 01 号铺](docs/screenshots/16-territory-zh.jpg)
+
+[占领前的地图](docs/screenshots/04-district-map.jpg) · [英文势力图](docs/screenshots/15-territory-capture.jpg) · [手机上的中文叠图](docs/screenshots/16-territory-zh-390.jpg)
 
 宝琳底图与左上角 Agentopia Logo 均来自团队授权沿用的 [Agentopia 香港地图](https://cciwang.github.io/Agentopia_HKdemo/)。1448 × 1086 的原图保留了宝翠公园球场、屋邨塔楼、弯道、玻璃顶商场和宝琳站。PolamLife 在画面上叠加可点击地标、商场铺位归属和开业消息，界面延续深紫、粉紫与淡紫的色调。两层商场、店面、小游戏及社区改造规则由本项目制作。截图全部来自实际运行画面。[美术规范](docs/art-bible.md) · [素材来源与授权范围](docs/assets.md) · [参考对照记录](docs/reference-study.md)
 

@@ -20,8 +20,7 @@
   cursor: grab;
   touch-action: none;
 }
-.w-map,
-#world:has(.w-with-atlas) {
+.w-map {
   background: radial-gradient(
     ellipse at 62% 50%,
     #b57d9e 0,
@@ -795,350 +794,290 @@
   filter: brightness(1.1);
 }
 
-.viewport {
-  --w-atlas-width: clamp(342px, 33%, 500px);
+.w-influence-on .w-art {
+  filter: saturate(0.66) brightness(0.92);
 }
-.w-roof-territories {
+.w-territories {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   z-index: 1;
-  pointer-events: none;
-}
-.w-roof-territories polygon {
-  stroke: #4c3256;
-  stroke-width: 2px;
-  fill-opacity: 0.8;
-}
-.w-roof-territories .w-roof-claim {
-  stroke: #fff2bf;
-  stroke-width: 4px;
-  fill-opacity: 1;
-  animation: w-claim 1.5s ease-in-out 3 alternate;
-}
-@keyframes w-claim {
-  to {
-    filter: drop-shadow(0 0 4px #ffdf83);
-  }
-}
-.w-marked-mall .w-place-sign {
-  border-bottom: 5px solid var(--w-focus-owner);
-}
-.w-map.w-with-atlas {
-  right: var(--w-atlas-width);
-}
-.w-territory-atlas {
-  position: absolute;
-  inset: 0 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: safe center;
-  width: var(--w-atlas-width);
-  padding: 72px clamp(18px, 2vw, 34px) 28px;
-  overflow: auto;
-  overscroll-behavior: contain;
-  color: #fff2ff;
-  background: linear-gradient(155deg, #37213e, #25172f 55%, #302039);
-  border-left: 3px double #c583ac;
-  box-shadow: -5px 0 18px #2e183b55;
-}
-.w-atlas-kicker,
-.w-atlas-level {
-  color: #e7b6da;
-  font: 700 10px/1.3 var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-}
-.w-atlas-head h2 {
-  margin: 4px 0 18px;
-  font: 700 clamp(31px, 3vw, 46px) / 1 var(--display);
-  letter-spacing: -0.055em;
-}
-.w-atlas-score,
-.w-atlas-key li,
-.w-atlas-claim {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.w-atlas-score {
-  padding: 9px 12px;
-  background: #58325f;
-  color: #fff5ff;
-  font-weight: 650;
-  border-radius: 5px;
-}
-.w-atlas-score strong {
-  margin-left: auto;
-  font: 750 21px/1.1 var(--mono);
-}
-.w-score-team {
-  display: grid;
-  gap: 1px;
-}
-.w-score-team small {
-  color: #f4cfeb;
-  font-size: 10px;
-  font-weight: 550;
-}
-.w-score-team b {
-  font-size: 15px;
-  line-height: 1.1;
-}
-.w-atlas-hint {
-  margin: -5px 0 12px;
-  color: #e6ccdf;
-  font-size: 12px;
-}
-.w-faction-badge {
-  width: 23px;
-  height: 23px;
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  background: var(--w-owner);
-  color: #33223c;
-  border: 1px solid #624565;
-  clip-path: polygon(0 0, 100% 0, 100% 76%, 50% 100%, 0 76%);
-}
-.w-atlas-plate {
-  position: relative;
-  margin: 12px 0;
-  padding: 7px 5px;
-  border-block: 1px solid #a46f99;
-  background-color: #402b49;
-  background-image:
-    linear-gradient(#bd86b226 1px, transparent 1px),
-    linear-gradient(90deg, #bd86b226 1px, transparent 1px);
-  background-size: 17px 17px;
-}
-.w-atlas-level {
-  display: block;
-  padding-inline: 6px;
-  font-size: 9px;
-  color: #eed3e8;
-}
-.w-atlas-level:last-child {
-  text-align: right;
-}
-.w-territory-chart {
-  display: block;
-  width: 100%;
-  color: #35243d;
   overflow: visible;
+  pointer-events: none;
 }
 .w-domain {
   cursor: pointer;
-}
-.w-domain:hover polygon,
-.w-domain:focus-visible polygon {
-  filter: brightness(1.13);
-  stroke: #fff9dc;
-  stroke-width: 6;
-}
-.w-domain:focus-visible {
   outline: none;
 }
-.w-domain text {
-  text-anchor: middle;
-  fill: #2e2135;
+.w-domain-fill {
+  fill-opacity: 0.43;
+  pointer-events: visiblePainted;
+  transition: fill-opacity 0.16s;
+}
+.w-domain:hover .w-domain-fill,
+.w-domain:focus-visible .w-domain-fill {
+  fill-opacity: 0.62;
+}
+.w-domain:focus-visible .w-domain-label rect {
+  stroke: white;
+  stroke-width: 4px;
+}
+.w-domain-label {
+  pointer-events: visiblePainted;
+  filter: drop-shadow(1px 2px 1px #29182cc4);
+}
+.w-domain-label text {
   pointer-events: none;
+  fill: #fff4fc;
+}
+.w-domain-mini {
+  display: none;
+}
+.w-map-overview .w-domain-label > :not(.w-domain-mini) {
+  display: none;
+}
+.w-map-overview .w-domain-label .w-domain-mini {
+  display: block;
+  transform: scale(var(--w-mini-scale));
+}
+.w-domain-mini text {
+  font: 750 11px var(--mono);
 }
 .w-domain-unit {
-  font: 650 10px var(--mono);
-  letter-spacing: 0.06em;
+  font: 650 9px var(--mono);
   text-transform: uppercase;
+  letter-spacing: 0.11em;
 }
 .w-domain-name {
-  font: 750 12.5px var(--sans);
+  font: 800 12.5px var(--sans);
 }
-.w-domain-line {
+.w-claim-stamp circle {
+  fill: #ffe69b;
+  stroke: #533449;
+  stroke-width: 1.5px;
+}
+.w-claim-stamp path {
+  fill: #503342;
+}
+.w-claim-outline {
   fill: none;
-  stroke: #48324c;
-  stroke-width: 3;
+  stroke: #ffe9ab;
+  stroke-width: 7;
+  stroke-dasharray: 7 9;
+  stroke-linejoin: round;
+  pointer-events: none;
+  animation: w-claim-march 3.6s linear 4;
+}
+@keyframes w-claim-march {
+  to {
+    stroke-dashoffset: -64;
+  }
+}
+.w-domain-line,
+.w-line-casing {
+  fill: none;
   stroke-linejoin: round;
   stroke-linecap: round;
   pointer-events: none;
 }
+.w-line-casing {
+  stroke: #493548;
+  stroke-width: 5;
+  opacity: 0.86;
+}
+.w-domain-line {
+  stroke: #fff2e5;
+  stroke-width: 2.1;
+}
 .w-domain-line[data-edge="internal"] {
-  stroke-width: 1.2;
-  stroke-dasharray: 2 4;
+  stroke: #563c50;
+  stroke-width: 1.5;
+  stroke-dasharray: 2 6;
   opacity: 0.72;
 }
 .w-domain-line[data-edge="perimeter"] {
-  stroke: #efc5e4;
-  stroke-width: 2;
+  stroke-width: 1.45;
 }
-.w-atlas-key {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 9px 15px;
-  padding: 0;
-  margin: 0;
+.w-territory-key {
+  position: absolute;
+  z-index: 7;
+  top: 74px;
+  right: 24px;
+  width: max-content;
+  max-width: min(249px, calc(100% - 28px));
+  color: #fff2fc;
+  background: #39253ff2;
+  border: 1px solid #ebbdde;
+  border-radius: 8px;
+  box-shadow:
+    0 3px 0 #29192e72,
+    0 3px 13px #331b3838;
+  cursor: default;
+  touch-action: manipulation;
+}
+.w-influence-details summary {
+  padding: 7px 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
   list-style: none;
+  cursor: pointer;
 }
-.w-atlas-key li {
-  font: 650 clamp(12px, 1vw, 15px) / 1.2 var(--sans);
+.w-influence-details summary::-webkit-details-marker {
+  display: none;
 }
-.w-atlas-key b {
+.w-influence-details summary:focus-visible {
+  outline: 2px solid #ffe3aa;
+  border-radius: 6px;
+}
+.w-influence-title {
+  display: grid;
+  gap: 1px;
+}
+.w-influence-title b {
+  font-size: 13px;
+}
+.w-influence-title small {
+  font-size: 10px;
+  color: #ead2e6;
+}
+.w-influence-details summary strong {
   margin-left: auto;
-  font: 700 13px var(--mono);
+  padding-left: 3px;
+  white-space: nowrap;
+  font: 750 15px var(--mono);
 }
-.w-atlas-claim {
-  flex-wrap: wrap;
-  margin-top: 15px;
-  padding-top: 10px;
-  border-top: 1px solid #75527f;
-  color: #e7cfe4;
+.w-key-disclosure {
+  width: 6px;
+  height: 6px;
+  border: solid #e9c8e3;
+  border-width: 0 1px 1px 0;
+  transform: rotate(45deg);
+}
+.w-influence-details[open] .w-key-disclosure {
+  transform: rotate(225deg);
+}
+.w-influence-factions {
+  margin: 0;
+  padding: 7px 10px;
+  list-style: none;
+  border-top: 1px solid #816580;
+}
+.w-influence-factions li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 12px;
+  padding: 2px 0;
 }
-.w-atlas-claim b {
+.w-influence-factions li b {
   margin-left: auto;
-  color: #fff0fc;
 }
-@media (min-width: 821px) {
-  .w-map.w-with-atlas {
-    top: 75px;
-    bottom: 106px;
-  }
-  .viewport:has(.w-with-atlas) .scene-card {
-    inset: auto var(--w-atlas-width) 0 0;
-    max-width: none;
-  }
-  .viewport:has(.w-with-atlas) .scene-card .field-card {
-    border-radius: 0;
-    border-width: 1px 0 0;
-  }
-  .viewport:has(.w-with-atlas) .scene-card .card-kicker {
-    padding: 4px 15px;
-  }
-  .viewport:has(.w-with-atlas) .scene-card .card-inner {
-    display: grid;
-    align-items: center;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 3px 12px;
-    padding: 7px 15px 9px;
-  }
-  .viewport:has(.w-with-atlas) .scene-card h1 {
-    font-size: 21px;
-  }
-  .viewport:has(.w-with-atlas) .scene-card p {
-    font-size: 12px;
-    margin: 0;
-  }
-  .viewport:has(.w-with-atlas) .scene-card :is(.small-chip, .team-tag) {
-    justify-self: start;
-    margin: 1px 0;
-  }
-  .viewport:has(.w-with-atlas) .scene-card .card-actions {
-    grid-area: 1 / 2 / span 3;
-  }
-  .w-with-atlas .w-controls {
-    bottom: 14px;
-    right: 11px;
-  }
-  body:has(.w-with-atlas) #announcer {
-    top: 85px;
-    bottom: auto;
-    left: 46%;
-    max-width: 31%;
-  }
+.w-influence-details p {
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 0;
+  padding: 0 10px 8px;
+  color: #edd7e9;
 }
-@media (max-width: 820px) {
-  #world {
-    --w-atlas-height: min(49%, 345px);
-  }
-  .w-map.w-with-atlas {
-    right: 0;
-    bottom: var(--w-atlas-height);
-  }
-  .w-territory-atlas {
-    inset: auto 0 0;
-    width: 100%;
-    height: var(--w-atlas-height);
-    padding: 12px 16px;
-    justify-content: flex-start;
-    border: 0;
-    border-top: 3px double #c583ac;
-  }
-  .w-atlas-head,
-  .w-atlas-score {
-    flex: none;
-  }
-  .w-atlas-head h2 {
-    margin: 2px 0 6px;
-    font-size: 25px;
-  }
-  .w-atlas-score {
-    padding: 4px 8px;
-    font-size: 12px;
-  }
-  .w-atlas-score strong {
-    font-size: 16px;
-  }
-  .w-score-team {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-  }
-  .w-score-team b {
-    font-size: 12px;
-  }
-  .w-atlas-hint {
-    margin: 0 0 4px;
-    font-size: 10px;
-  }
-  .w-atlas-plate {
-    margin: 6px 0;
-    padding: 3px;
-  }
-  .w-territory-chart {
-    height: clamp(120px, 20vh, 165px);
-  }
-  .w-atlas-level {
-    position: absolute;
-    left: 0;
-    top: 0;
-    padding: 2px;
-    font-size: 7px;
-  }
-  .w-atlas-level:last-child {
-    inset: auto 0 0 auto;
-  }
-  .w-atlas-key {
-    gap: 3px 16px;
-  }
-  .w-atlas-key .w-faction-badge {
-    width: 18px;
-    height: 18px;
-  }
-  .w-atlas-claim {
-    margin-top: 5px;
-    padding-top: 3px;
-  }
-  .viewport:has(.w-with-atlas) .scene-card {
-    bottom: calc(min(49%, 345px) + 7px);
-    max-width: calc(100% - 65px);
-  }
-  .viewport:has(.w-with-atlas)
-    .scene-card
-    :is(.card-kicker, h1, p, .small-chip, .team-tag) {
-    display: none;
-  }
-  .viewport:has(.w-with-atlas) .scene-card .card-inner {
-    padding: 3px;
-  }
-  .viewport:has(.w-with-atlas) .scene-card .field-card {
-    width: fit-content;
-  }
-  body:has(.w-with-atlas) #announcer {
-    top: 134px;
+.w-faction-badge {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 21px;
+  height: 23px;
+  background: var(--w-owner);
+  color: #34253c;
+  clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+}
+.w-influence-on
+  .w-place:not(.w-place-main):not(:hover):not(:focus-visible)
+  .w-place-copy {
+  display: none;
+}
+.w-influence-on
+  .w-place:not(.w-place-main):not(:hover):not(:focus-visible)
+  .w-place-sign {
+  min-height: 25px;
+  padding: 0 3px;
+}
+.w-influence-on .w-place:not(.w-place-main) .w-place-sign {
+  translate: 0;
+}
+.w-influence-on .w-place-icon,
+.w-influence-on .w-place-icon img {
+  width: 22px;
+  height: 22px;
+}
+.w-influence-on .w-place-main .w-place-sign {
+  min-height: 34px;
+  border-bottom: 3px solid var(--w-focus-owner);
+}
+.w-influence-on .w-place-main .w-place-copy small {
+  display: none;
+}
+.viewport:has(.w-influence-on) .scene-card {
+  max-width: min(267px, calc(100% - 60px));
+}
+.viewport:has(.w-influence-on) .scene-card .card-kicker {
+  padding: 5px 10px;
+}
+.viewport:has(.w-influence-on) .scene-card .card-inner {
+  padding: 8px 12px 10px;
+}
+.viewport:has(.w-influence-on) .scene-card h1 {
+  font-size: 20px;
+}
+.viewport:has(.w-influence-on) .scene-card p {
+  font-size: 12px;
+  margin: 5px 0;
+}
+.viewport:has(.w-influence-on) .scene-card .team-tag {
+  display: none;
+}
+@media (max-width: 780px) {
+  body:has(.w-influence-on) #announcer {
     bottom: auto;
+    top: 175px;
     left: calc(50% + 16px);
     width: max-content;
-    max-width: calc(100% - 76px);
+    max-width: calc(100% - 78px);
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .w-territory-key {
+    top: 52px;
+    right: 10px;
+  }
+  .w-influence-details summary {
+    gap: 5px;
+    padding: 5px 7px;
+  }
+  .w-influence-title b {
+    font-size: 11px;
+  }
+  .w-influence-title small {
+    font-size: 9px;
+  }
+  .w-influence-details summary strong {
+    font-size: 12px;
+  }
+  .viewport:has(.w-influence-on) .scene-card {
+    max-width: calc(100% - 61px);
+  }
+  .viewport:has(.w-influence-on) .scene-card :is(.card-kicker, p, .small-chip) {
+    display: none;
+  }
+  .viewport:has(.w-influence-on) .scene-card h1 {
+    font-size: 15px;
+    margin-bottom: 5px;
+  }
+  .viewport:has(.w-influence-on) .scene-card .card-inner {
     padding: 6px 9px;
+  }
+  .viewport:has(.w-influence-on) .scene-card .btn {
+    min-height: 30px;
     font-size: 11px;
   }
 }

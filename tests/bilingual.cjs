@@ -39,6 +39,23 @@ async function run() {
     assert.match(ticket, /[\u3400-\u9fff]/, "The order must be readable in Chinese");
     await page.getByRole("button", { name: "递上" + ticket, exact: true }).click();
   }
+  const influence = page.locator(".w-board > svg.w-territories");
+  const legend = page.locator(".w-territory-key");
+  const donutUnit = influence.locator('[data-territory-unit="unit01"]');
+  async function revisitTarget(phase, ownedCount) {
+    await act("map");
+    await influence.waitFor();
+    assert.equal(await donutUnit.getAttribute("data-phase"), phase);
+    assert.equal(await legend.locator("[data-owned-count]").getAttribute("data-owned-count"), String(ownedCount));
+    assert.equal(await donutUnit.getAttribute("data-owner"), ownedCount === 1 ? "incumbent" : "trend");
+    const label = await donutUnit.getAttribute("aria-label");
+    assert.match(label, /[\u3400-\u9fff]/);
+    assert.doesNotMatch(label, /[a-z]{2,}/i);
+    if (ownedCount === 2) assert.match(label, /最近占领/);
+    await donutUnit.focus();
+    await page.keyboard.press("Enter");
+    await page.locator(".w-shop").waitFor();
+  }
 
   try {
     await page.goto(process.env.DEMO_URL || "http://127.0.0.1:4173/");
@@ -66,12 +83,34 @@ async function run() {
     await chinese(dialog, "Alliance recommendation");
     await act("join");
     assert.deepEqual((await world()).player.preferences, ["tea", "game", "cafe"]);
+    await influence.waitFor();
+    assert.equal(await influence.getAttribute("aria-label"), "宝琳商铺影响范围示意");
+    assert.equal(await legend.getAttribute("aria-label"), "商铺影响图例");
+    const details = legend.locator("details");
+    if (!await details.evaluate((node) => node.open)) await legend.locator("summary").click();
+    assert.equal(await details.evaluate((node) => node.open), true, "The legend must expand on click");
+    await chinese(legend, "District influence legend");
+    const factionCounts = await legend.locator("li[data-faction]").evaluateAll((rows) =>
+      Object.fromEntries(rows.map((row) => [row.dataset.faction, Number(row.querySelector("b").textContent)])),
+    );
+    assert.deepEqual(factionCounts, { trend: 1, comfort: 2, collective: 2, incumbent: 1 });
+    await switchTo("en");
+    assert.equal(await influence.getAttribute("aria-label"), "Illustrative shop influence areas in Po Lam");
+    assert.equal(await legend.getAttribute("aria-label"), "Shop influence legend");
+    assert.equal(await details.evaluate((node) => node.open), true, "Switching languages must keep the legend open");
+    assert.match(await donutUnit.getAttribute("aria-label"), /Glaze Lane/);
+    await switchTo("zh-CN");
+    await legend.locator("summary").click();
+    assert.match(await donutUnit.getAttribute("aria-label"), /糖霜小巷/);
     await act("mall");
     await chinese(page.locator("[data-shop]"), "Six storefronts");
     await page.locator('[data-shop="unit01"]').click();
     await act("scout");
     await chinese(dialog, "Scouting");
     await act("challenge");
+    await act("close");
+    await revisitTarget("contested", 1);
+    await act("contest");
     await act("invite");
     await page.waitForFunction(() =>
       JSON.parse(localStorage.getItem("polamlife.fieldguide.v1")).state.contest.participants.length === 3,
@@ -111,8 +150,12 @@ async function run() {
     await dialog.locator('[data-do="count"]').waitFor();
     assert.deepEqual((await world()).proposal.votes, { player: "tea", mina: "tea", kit: "game" });
     await chinese(dialog, "Completed ballots");
+    await act("close");
+    await revisitTarget("voting", 2);
+    await act("voting");
     await act("count");
     await chinese(page.locator(".scene-card"), "Renovation");
+    await revisitTarget("renovating", 2);
     await page.reload();
     await page.locator('[data-do="advance"]').waitFor();
     assert.equal(await lang(), "zh-CN");
@@ -121,6 +164,7 @@ async function run() {
     assert.equal((await world()).day, 2);
     assert.equal((await world()).shops.unit01.type, "tea");
     await chinese(page.locator(".scene-card, .opening-ribbon"), "Opening day");
+    await revisitTarget("reopened", 2);
     await act("daily");
     await chinese(dialog, "Newspaper and saved events");
     assert.match(await dialog.innerText(), /珍珠茶社/);

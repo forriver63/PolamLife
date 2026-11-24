@@ -10,6 +10,8 @@ const draft = process.argv.includes("--draft");
 const baseSize = { width: 1440, height: 900 };
 const laptop = { width: 1366, height: 768 };
 const wide = { width: 1920, height: 1080 };
+const phone = { width: 390, height: 844 };
+const desktopSizes = [laptop, wide, baseSize];
 
 async function run() {
   const executablePath = process.env.CHROME_PATH || undefined;
@@ -38,8 +40,7 @@ async function run() {
       .first()
       .click();
   };
-  async function snap(name, alternate = false) {
-    const sizes = alternate ? [laptop, wide, baseSize] : [baseSize];
+  async function snap(name, sizes = [baseSize]) {
     for (const size of sizes) {
       await page.setViewportSize(size);
       await page.waitForFunction(() =>
@@ -130,17 +131,147 @@ async function run() {
       .waitFor();
   }
 
+  // Exercise every entrance in a separate save so these QA visits do not appear
+  // in the main pitch's newspaper or merchant footfall.
+  async function checkTerritoryControls(snapshot) {
+    const probe = await browser.newPage({ viewport: baseSize, reducedMotion: "reduce", hasTouch: true });
+    probe.setDefaultTimeout(6000);
+    try {
+      await probe.goto(url);
+      await probe.evaluate((data) => {
+        localStorage.setItem("polamlife.fieldguide.v1", JSON.stringify(data));
+      }, snapshot);
+      await probe.reload();
+      const map = probe.locator(".w-map");
+      const layer = map.locator(".w-board > svg.w-territories");
+      const art = map.locator(".w-board > .w-art");
+      const toggle = probe.locator('[data-do="layers"]');
+      const settle = async () => {
+        await art.evaluate((img) => img.decode());
+        await probe.evaluate(() => new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ));
+      };
+      const sameFrame = (actual, expected, label) => {
+        assert(actual && expected, label + " must be visible");
+        for (const key of ["x", "y", "width", "height"])
+          assert(Math.abs(actual[key] - expected[key]) <= 1, label + " changed " + key);
+      };
+      const visibleDistrict = () => layer.evaluate((svg) => {
+        const frame = svg.closest(".w-map").getBoundingClientRect();
+        for (let y = frame.top + 72; y < frame.bottom - 70; y += 20) {
+          for (let x = frame.left + 25; x < frame.right - 85; x += 20) {
+            const district = document.elementFromPoint(x, y)?.closest("[data-territory-unit]");
+            if (district) return { x, y, unit: district.getAttribute("data-territory-unit") };
+          }
+        }
+        return null;
+      });
+      const checkShop = async (id) => {
+        await probe.locator(".w-shop").waitFor();
+        assert.equal(await probe.evaluate(() =>
+          JSON.parse(localStorage.getItem("polamlife.fieldguide.v1")).view.shopId), id);
+        await probe.locator('.rail [data-do="map"]').click();
+        await settle();
+      };
+
+      for (const size of [baseSize, phone, { width: 320, height: 700 }]) {
+        await probe.setViewportSize(size);
+        await settle();
+        assert.equal(await layer.locator("[data-territory-unit]").count(), 6);
+        const viewport = await map.boundingBox();
+        const painting = await art.boundingBox();
+        sameFrame(await layer.boundingBox(), painting, "Influence overlay at " + size.width);
+        await toggle.click();
+        await settle();
+        assert.equal(await layer.count(), 0);
+        assert.equal(await probe.locator("[data-owned-count]").count(), 0);
+        sameFrame(await map.boundingBox(), viewport, "Map viewport with layer off");
+        sameFrame(await art.boundingBox(), painting, "Base map with layer off");
+        await toggle.click();
+        await settle();
+        sameFrame(await layer.boundingBox(), painting, "Restored overlay");
+        assert.equal(await probe.evaluate(() => document.documentElement.scrollWidth), size.width);
+        const key = await probe.locator(".w-territory-key").boundingBox();
+        assert(key && key.x >= 0 && key.y >= 0 &&
+          key.x + key.width <= size.width + 1 && key.y + key.height <= size.height + 1,
+          "Territory key must fit inside the viewport at " + size.width);
+        if (size.width < 500) {
+          const target = await visibleDistrict();
+          assert(target, "The narrow map must expose a touchable colored district");
+          await probe.touchscreen.tap(target.x, target.y);
+          await checkShop(target.unit);
+        }
+      }
+
+      await probe.setViewportSize(baseSize);
+      await settle();
+      const beforeZoom = await art.boundingBox();
+      await map.focus();
+      await probe.keyboard.press("=");
+      await probe.keyboard.press("=");
+      const afterZoom = await art.boundingBox();
+      assert(afterZoom.width > beforeZoom.width);
+      sameFrame(await layer.boundingBox(), afterZoom, "Zoomed influence overlay");
+      await probe.keyboard.press("ArrowRight");
+      const panned = await art.boundingBox();
+      assert(Math.abs(panned.x - afterZoom.x) > 1);
+      sameFrame(await layer.boundingBox(), panned, "Panned influence overlay");
+      const startPoint = await visibleDistrict();
+      assert(startPoint, "A colored district must accept pointer input");
+      await probe.mouse.move(startPoint.x, startPoint.y);
+      await probe.mouse.down();
+      await probe.mouse.move(startPoint.x + 75, startPoint.y + 35, { steps: 8 });
+      await probe.mouse.up();
+      assert.equal(await map.count(), 1, "Dragging a district must keep the player on the map");
+      const dragged = await art.boundingBox();
+      assert(Math.abs(dragged.x - panned.x) > 10, "Dragging a colored district must pan the map");
+      sameFrame(await layer.boundingBox(), dragged, "Dragged influence overlay");
+      const tap = await visibleDistrict();
+      assert(tap);
+      await probe.mouse.click(tap.x, tap.y);
+      await checkShop(tap.unit);
+      sameFrame(await art.boundingBox(), dragged, "Returning to the map must restore the camera");
+      await toggle.click();
+      await settle();
+      sameFrame(await art.boundingBox(), dragged, "Hiding the layer must preserve camera position and zoom");
+      await toggle.click();
+      await settle();
+      sameFrame(await layer.boundingBox(), dragged, "Showing the layer must preserve the camera");
+      await map.focus();
+      await probe.keyboard.press("Home");
+
+      for (const [index, shop] of Object.values(snapshot.state.shops).entries()) {
+        const area = layer.locator('[data-territory-unit="' + shop.id + '"]');
+        assert.equal(await area.getAttribute("data-owner"), shop.owner);
+        assert.equal(await area.getAttribute("data-phase"), shop.phase);
+        assert.equal(await area.getAttribute("role"), "button");
+        assert.equal(await area.getAttribute("tabindex"), "0");
+        for (const method of ["pointer", index % 2 ? "Space" : "Enter"]) {
+          if (method === "pointer") await area.click();
+          else {
+            await area.focus();
+            await probe.keyboard.press(method);
+          }
+          await checkShop(shop.id);
+        }
+      }
+    } finally {
+      await probe.close();
+    }
+  }
+
   try {
     await page.goto(url, { waitUntil: "networkidle" });
     await page.locator('[data-do="start"]').waitFor();
-    await snap("01-opening", true);
+    await snap("01-opening", desktopSizes);
     await act("start");
     assert.equal((await saved()).view.shopId, "unit01");
     await snap("06-donut-shop");
     await act("prefs");
     for (const type of ["tea", "game", "cafe"])
       await page.locator('[data-choice="' + type + '"]').click();
-    await snap("02-preferences", true);
+    await snap("02-preferences", desktopSizes);
     await act("match");
     const best = page.locator("[data-team]").first();
     assert.equal(await best.getAttribute("data-team"), "trend");
@@ -162,25 +293,28 @@ async function run() {
     await map.focus();
     await page.keyboard.press("=");
     assert.notEqual(await transform(), initialCamera);
+    await page.keyboard.press("=");
     const zoomed = await transform();
     await page.keyboard.press("ArrowRight");
     assert.notEqual(await transform(), zoomed);
     await page.keyboard.press("Home");
     assert.equal(await transform(), initialCamera);
-    const atlas = page.locator(".w-territory-atlas");
-    await atlas.waitFor();
-    assert.equal(await atlas.locator("[data-territory-unit]").count(), 6);
-    assert.equal(await atlas.locator("[data-owned-count]").getAttribute("data-owned-count"), "1");
-    assert.equal(await atlas.locator('[data-territory-unit="unit01"]').getAttribute("data-owner"), "incumbent");
+    const territories = page.locator(".w-map .w-board > svg.w-territories");
+    const holdings = page.locator(".w-territory-key [data-owned-count]");
+    const claim = territories.locator('[data-territory-unit="unit01"]');
+    await territories.waitFor();
+    assert.equal(await holdings.getAttribute("data-owned-count"), "1");
+    assert.equal(await claim.getAttribute("data-owner"), "incumbent");
+    const originalFill = await claim.locator("polygon.w-domain-fill").evaluate((shape) => getComputedStyle(shape).fill);
+    await checkTerritoryControls(await saved());
+    await snap("04-district-map", desktopSizes);
     await act("layers");
-    assert.equal(await atlas.count(), 0);
-    await act("layers");
+    assert.equal(await territories.count(), 0);
     const place = page.locator('[data-location="central"]');
     await place.click();
-    await snap("04-district-map", true);
     await act("mall");
     assert.equal(await page.locator("[data-shop]").count(), 6);
-    await snap("05-mall-atrium", true);
+    await snap("05-mall-atrium", desktopSizes);
     await page.locator('[data-shop="unit01"]').click();
     await startChallenge();
     await playRush(false);
@@ -196,18 +330,22 @@ async function run() {
     await playRush(true);
     assert.equal((await world()).shops.unit01.owner, "trend");
     await act("territoryMap");
-    await atlas.waitFor();
-    assert.equal(await atlas.locator("[data-owned-count]").getAttribute("data-owned-count"), "2");
-    const claim = atlas.locator('[data-territory-unit="unit01"]');
+    await territories.waitFor();
+    assert.equal(await holdings.getAttribute("data-owned-count"), "2");
     assert.equal(await claim.getAttribute("data-owner"), "trend");
+    assert.equal(await claim.getAttribute("data-phase"), "captured");
     assert.equal(await claim.getAttribute("data-latest-capture"), "");
-    await snap("15-territory-capture", true);
+    assert.equal(await territories.locator("[data-latest-capture]").count(), 1);
+    const captureFill = await claim.locator("polygon.w-domain-fill").evaluate((shape) => getComputedStyle(shape).fill);
+    assert.notEqual(captureFill, originalFill, "Capture must recolor the map itself");
+    const friendly = territories.locator('[data-territory-unit="unit03"] polygon.w-domain-fill');
+    assert.equal(captureFill, await friendly.evaluate((shape) => getComputedStyle(shape).fill));
+    await snap("15-territory-capture", desktopSizes);
     const languageToggle = page.locator("header.mast [data-language-switch]");
     await languageToggle.click();
-    assert.equal(await atlas.getAttribute("aria-label"), "联盟势力版图");
     assert.match(await claim.getAttribute("aria-label"), /最近占领/);
-    assert.equal(await atlas.locator("[data-owned-count]").getAttribute("data-owned-count"), "2");
-    await snap("16-territory-zh");
+    assert.equal(await holdings.getAttribute("data-owned-count"), "2");
+    await snap("16-territory-zh", [phone, baseSize]);
     await languageToggle.click();
     await claim.click();
     await act("propose");
@@ -226,7 +364,7 @@ async function run() {
     assert.equal((await world()).day, 2);
     assert.equal((await world()).shops.unit01.type, "tea");
     assert.equal((await world()).history.length, 1);
-    await snap("10-grand-opening", true);
+    await snap("10-grand-opening", desktopSizes);
     await act("daily");
     assert.match(
       await page.locator(".cn-lead").innerText(),
@@ -238,7 +376,7 @@ async function run() {
     const ledger = page.getByRole("dialog");
     assert.match(await ledger.innerText(), /Simulated allies/);
     assert.match(await ledger.innerText(), /Glaze Lane → Pearl Club/);
-    await snap("11-merchant-insights", true);
+    await snap("11-merchant-insights", desktopSizes);
     await act("close");
     await act("mall");
     const newFront = page.locator('[data-shop="unit01"]');
@@ -288,6 +426,9 @@ async function run() {
     assert.match(await page.getByRole("dialog").innerText(), /Roll Call/);
     await act("close");
     await act("map");
+    assert.equal(await claim.getAttribute("data-phase"), "reopened");
+    assert.match(await claim.getAttribute("aria-label"), /Pearl Club/);
+    await act("layers");
     assert.match(await place.innerText(), /Pearl Club opens/);
     assert.equal(
       await map.locator(".w-rooftop").getAttribute("data-tenant"),

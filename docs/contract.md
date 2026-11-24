@@ -23,7 +23,7 @@ A successful Shop Rush and three distinct participants can arrive in either orde
 
 ## Scene and activity interfaces
 
-`src/world.js` exports `mountWorld(container, {state, scene, shopId, territories, onLocation, onShop})` for the map, mall and shop views. It returns a cleanup function. The district has six landmarks. MCP Central contains six playable storefronts. Its territory overlay paints the mall roof and a selectable six-unit plan from the saved owners. Joining enables the layer. The manual switch persists with the view. `districtFocusShop(state)` selects the current contest or refit, then the latest reopening, then Unit 01.
+`src/world.js` exports `mountWorld(container, {state, scene, shopId, territories, onLocation, onShop})` for the map, mall and shop views. It returns a cleanup function. The district has six landmarks. MCP Central contains six playable storefronts. Its territory overlay is registered to the same camera-transformed district illustration. Six clickable areas represent the influence of the six mall shops and read each saved owner. The game counts controlled shop IDs. The area outlines are illustrative. Joining enables the layer. The manual switch persists with the view. `districtFocusShop(state)` selects the current contest or refit, then the latest reopening, then Unit 01.
 
 `src/rounds.js` mounts Shop Rush and Service Relay. The controller supplies a live crew lookup, a result callback for immediate settlement and a later callback for displaying the report. Leaving an unfinished shift discards its clock and inputs. `src/community.js` renders the daily paper, alliance roster, insights and Director controls from the same world.
 

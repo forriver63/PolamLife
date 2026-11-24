@@ -1,4 +1,9 @@
 export const worldText = {
+  "Shop influence legend": "商铺影响图例",
+  "Shop influence areas": "商铺影响范围示意",
+  "Illustrative shop influence areas in Po Lam": "宝琳商铺影响范围示意",
+  "Colors show illustrative shop influence. Select an area to enter its shop.":
+    "色块示意商铺影响范围。点击地块可进入对应店铺。",
   "Territory map": "势力版图",
   "Alliance territory map": "联盟势力版图",
   "Six shop territories at MCP Central": "新都城中心二期六个铺位的势力分布",
