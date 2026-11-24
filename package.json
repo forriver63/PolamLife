@@ -8,6 +8,7 @@
     "test": "node --test tests/game.test.mjs",
     "build": "node tools/package.mjs",
     "test:e2e": "node tests/pitch.cjs",
+    "test:locations": "node tests/locations.cjs",
     "test:bilingual": "node tests/bilingual.cjs"
   },
   "devDependencies": {

@@ -1,4 +1,5 @@
 import { ALLIANCES, RULES, TYPES } from "./game.js";
+import { REGIONS, regionOfShop } from "./regions.js";
 import { icon } from "./icons.js";
 
 const allianceSymbols = {
@@ -40,6 +41,7 @@ function safe(value) {
 }
 const shopName = (type) => TYPES[type]?.shopName ?? "Shop";
 const typeName = (type) => TYPES[type]?.name ?? "Shop";
+const placeName = (id) => REGIONS[regionOfShop(id)]?.name || "Po Lam District";
 const unit = (id) => "Unit " + id.replace("unit", "");
 const note = (text) => '<p class="cn-note">' + safe(text) + "</p>";
 const heading = (label, detail) =>
@@ -91,7 +93,7 @@ export function daily(state) {
       : lead?.kind === "capture"
         ? "The keys change hands"
         : lead?.kind === "renovation"
-          ? "A new sign for the atrium"
+          ? "A new tenant on the way"
           : "Around the neighborhood";
   const comparison = unitOpened
     ? '<figure class="cn-comparison">' +
@@ -119,7 +121,7 @@ export function daily(state) {
     dayTag(state.day) +
     ' · Local edition</span></div><div class="cn-lead"><span class="cn-edition">' +
     icon(unitOpened ? "sun" : "paper", 22) +
-    " MCP Central</span><h3>" +
+    " " + placeName(lead?.shopId) + "</span><h3>" +
     safe(headline) +
     "</h3>" +
     (lead ? "<p>" + safe(lead.text) + "</p>" : "") +
@@ -197,7 +199,6 @@ function voteRecord(state) {
 
 export function insights(state) {
   const preferences = countTypes(state.player.preferences);
-  const locations = new Set(Object.values(state.shops).map((s) => s.location));
   const visits = Object.entries(state.visits)
     .filter(([, n]) => n > 0)
     .sort((a, b) => b[1] - a[1]);
@@ -208,7 +209,7 @@ export function insights(state) {
         '<li><span class="eyebrow cn-caption">' +
         dayTag(h.readyDay) +
         " · " +
-        safe(unit(h.shopId)) +
+        safe(placeName(h.shopId)) + " · " + safe(unit(h.shopId)) +
         "</span><strong>" +
         safe(shopName(h.fromType)) +
         " → " +
@@ -221,10 +222,7 @@ export function insights(state) {
       typeName(preferences[0][0]).toLowerCase() +
       " options near the station? A resident survey could test that idea."
     : "Which shops would residents like near the station? A local survey could test the ideas collected here.";
-  const scope =
-    locations.size === 1 && locations.has("central")
-      ? "All shop activity in this save comes from MCP Central. Preference picks describe Po Lam as a whole. Other districts have no observations."
-      : "Preference picks describe Po Lam as a whole. Shop entries are counted at their individual units.";
+  const scope = "Preference picks describe Po Lam as a whole. Shop entries are counted at their individual units.";
   // The six named NPCs have a seeded home stop. This is a scenario breakdown,
   // separate from the local player's selections and from observed shop entry counts.
   const neighborhoods = [
@@ -279,11 +277,11 @@ export function insights(state) {
     voteRecord(state) +
     "</section>" +
     "<section>" +
-    heading("Footfall at MCP Central", "Your game activity") +
+    heading("Shop visits around Po Lam", "Your game activity") +
     (visits.length
       ? bars(
           visits.map(([id, n]) => [
-            unit(id) + " · " + shopName(state.shops[id].type),
+            placeName(id) + " · " + unit(id) + " · " + shopName(state.shops[id].type),
             n,
           ]),
         ) +
@@ -384,7 +382,7 @@ export function allianceProfile(state) {
           "<li><strong>" +
           safe(shopName(s.type)) +
           "</strong><span>" +
-          safe(unit(s.id)) +
+          safe(placeName(s.id)) + " · " + safe(unit(s.id)) +
           " · " +
           safe(phases[s.phase]) +
           "</span></li>",
@@ -398,7 +396,7 @@ export function allianceProfile(state) {
         : "No active challenge",
     ) +
     (active
-      ? note(shopName(state.shops[contest.shopId].type) + " · MCP Central")
+      ? note(shopName(state.shops[contest.shopId].type) + " · " + placeName(contest.shopId))
       : "") +
     "</section><section>" +
     heading("Crew dispatches", "Latest activity") +

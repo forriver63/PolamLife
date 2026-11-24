@@ -1,6 +1,13 @@
 // English is the source language for the field guide. The same captions are
 // translated wherever they occur, including aria labels and restored events.
 export const uiText = {
+  "Explore the neighborhood": "探索宝琳街区",
+  "Choose a place on the map and walk up to a shop. Glaze Lane is at MCP Central.": "点地图上的地点，再走进店铺。糖霜小巷在新都城中心二期。",
+  "Choose your favorite shops to find an alliance and take part here.": "选出喜欢的店，加入联盟，就能参与这里的商铺争夺。",
+  "PO LAM · ALLIANCE SHOPS": "宝琳 · 联盟铺位", "Your alliance holds Po Lam": "你的联盟已拿下宝琳所有铺位",
+  "NEIGHBORHOOD": "社区近景", "Shop visits around Po Lam": "宝琳各区商铺到访",
+  "A new tenant on the way": "新店即将进驻",
+  "Choose a place, enter a rival shop and invite two allies to clear the rush.": "选择一个地点，走进其他联盟的铺位，邀请两位队友完成接单挑战。",
   "Captured": "已占领", "Closed": "暂停营业",
   "Choose a shopping street": "点商段，选一家店",
   "Tap a street sign to see its three shops. Glaze Lane is on Station Walk.": "点地图上的商段招牌，可以看到三家店。糖霜小巷在车站商段。",
@@ -87,7 +94,7 @@ export function uiPatterns(s,tr) {
     [/^(.+) favors (.+?)\. (.+) favors (.+?)\. (.+)$/,([,a,b,c,d,e])=>`${tr(a)} 支持${tr(b)}，${tr(c)} 支持${tr(d)}。${tr(e)}`],
     [/^Your crew has claimed (.+)\. The old counter is closed\. Your crew can now vote on its replacement\.$/,([,a])=>'你的联盟已占领'+tr(a)+'。旧店暂停营业，可以投票选出新店。'],
     [/^The counter has a defense rating of (\d+) \/ (\d+)\.$/,([,a,b])=>`当前柜台防守值为 ${a}/${b}。`],
-    [/^Joined (.+) · choose a street on the map\.$/,([,a])=>'已加入'+tr(a)+'。点地图上的商段招牌，去看看沿街的店。'],
+    [/^Joined (.+) · choose a place on the map\.$/,([,a])=>'已加入'+tr(a)+'。点地图上的地点，去看看当地的店。'],
     [/^(.+) joined as (.+)\.$/,([,a,b])=>tr(a)+' 已到场，负责'+tr(b)+'。'],
     [/^(.+) joined the defense shift\.$/,([,a])=>tr(a)+' 已加入防守班次。'],
     [/^(.+) won the ballot!$/,([,a])=>tr(a)+'赢得投票！'],

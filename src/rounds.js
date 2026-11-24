@@ -1,6 +1,8 @@
 import { RULES, TYPES } from "./game.js";
 import { icon } from "./icons.js";
 
+import { REGIONAL_ORDERS, regionalProduct } from "./regional-products.js";
+
 const MENU = {
   donut: [
     ["Berry ring", "#f3a3a7"],
@@ -54,6 +56,7 @@ const extra = [
   '<path d="m17 35 10 5m-1-17 9 4m6 12 8 4m-1-18 8 4" fill="none" stroke="#fff8d0"/>',
 ];
 function product(type, i) {
+  if (Object.hasOwn(REGIONAL_ORDERS, type)) return regionalProduct(type, i);
   const color = MENU[type][i][1];
   const bodies = {
     donut:
@@ -92,8 +95,9 @@ function shuffled(list) {
 
 export function mountRound(container, { game, shop, onFinish, onReport, sound = false, crewSupport = () => [] }) {
   const emergency = game === "emergency";
-  const type = Object.hasOwn(MENU, shop.type) ? shop.type : "donut";
-  const items = emergency ? STATIONS : MENU[type].map(([name]) => name);
+  const type = shop.type;
+  const menu = REGIONAL_ORDERS[type] || MENU[type];
+  const items = emergency ? STATIONS : menu.map(([name]) => name);
   const art = (i) => (emergency ? station(i) : product(type, i));
   let limit = emergency ? RULES.emergencySeconds : RULES.rushSeconds;
   const queueBonusSeconds = 4;

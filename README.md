@@ -31,6 +31,7 @@ npm ci
 npx playwright install chromium --only-shell
 npm run test:e2e
 npm run test:bilingual
+npm run test:locations
 ```
 
 Playwright 是仅用于测试的依赖。项目没有独立的 Type Check 或 Lint 脚本。源代码、PNG/WebP 素材和锁文件随库交接，构建目录可随时重新生成。HTTP 版与直接从磁盘打开的副本可能使用不同的浏览器存档。
@@ -56,7 +57,7 @@ flowchart LR
 | 依据 | 能确认什么 |
 | --- | --- |
 | PDF 已明确 | 真实宝琳的虚拟版本、按偏好结盟、商铺攻防与经营、足够多人到场后易主、联盟投票定业态、一天后出现新店，以及潜在的商户参考价值。 |
-| 为这版 Demo 选择的规则 | 三个可加入的联盟，各两名具名模拟盟友。玩家可自由改选推荐联盟。全街区一次只推进一个铺位的争夺与改造，开业后可挑战下一铺，需要三名不同成员到场和一次接单胜利。三位成员各一票，平票由候选列表中靠前者胜出。时钟由演示者推进一天。 |
+| 为这版 Demo 选择的规则 | 三个可加入的联盟，各两名具名模拟盟友。玩家可自由改选推荐联盟。全街区一次只推进一个铺位的争夺与改造，开业后可挑战下一铺，需要三名不同成员到场和一次接单胜利。二期改造有三个候选，其他五区的候选是本地另外两种业态，同一区可开同名分店。三位成员各一票，平票由候选列表中靠前者胜出。时钟由演示者推进一天。 |
 | 团队待定 | 正式联盟生成方式和规模、攻守平衡、参与与防刷资格、现实时间或游戏时间、长期地图范围、赛季胜负、数据治理和商业模式。 |
 
 具体数值、失败路径和设计取舍见[游戏设计笔记](docs/game-design-notes.md)。
@@ -65,27 +66,36 @@ flowchart LR
 
 | 时间 | 实际操作 | 留意画面里的变化 |
 | --- | --- | --- |
-| 0:00 | 点 **Enter Po Lam**，进入 Glaze Lane，点 **Choose your favorites**。按顺序选 **Bubble Tea Shop → Gaming Store → Café**，点 **Find my alliance**，选推荐的 **The Trendsetters → Join alliance**。 | 地图自动显示势力图。潮流派在车站侧有一家电玩店，全商场共六铺。 |
-| 0:45 | 点开 **Station Walk / 车站商段**，在三个门面中选 **01 · Glaze Lane**。也可以从 **MCP Central → Enter the mall** 进地面层。选择 **Scout this shop → Launch a challenge → Invite allies**。 | Mina 和 Kit 有独立身份、到场记录和岗位。接单助手能补救一次错单，队列管理员多争取 4 秒。 |
+| 0:00 | 点 **Enter Po Lam**，进入 Glaze Lane，点 **Choose your favorites**。按顺序选 **Bubble Tea Shop → Gaming Store → Café**，点 **Find my alliance**，选推荐的 **The Trendsetters → Join alliance**。 | 地图自动显示势力图。潮流派初始持有全区 5/21 铺，其中二期 1/6 铺。 |
+| 0:45 | 点击 **MCP Central / 新都城中心二期**，在中庭地面层点 **01 · Glaze Lane**。选择 **Scout this shop → Launch a challenge → Invite allies**。 | Mina 和 Kit 有独立身份、到场记录和岗位。接单助手能补救一次错单，队列管理员多争取 4 秒。 |
 | 1:30 | 点 **Play shop rush → Start shift**，读订单，点击相应商品，或按数字键 1–3。基准目标为五张订单。 | 三次未补救的错误或超时会让守方保住店铺，可以重新挑战。人数不足时，即便清完订单也不能占领。 |
-| 2:10 | 占领后点 **View territory change**。在车站侧对照三个门面，点刚易主的 **01** 回店，再点 **Open alliance ballot**。 | 01 号铺落闸换旗，和自家的 03 号铺连成一片。车站侧从 **1 / 3** 变成 **2 / 3**，全商场持有 **2 / 6**，06 号铺仍属对手。 |
+| 2:10 | 占领后点 **View territory change**。在总图找到二期的易主标记，进入中庭，点落闸的 **01** 回店，再点 **Open alliance ballot**。 | 01 号铺落闸换旗。二期从 **1/6** 变成 **2/6**，全区从 **5/21** 变成 **6/21**。公园、车站等地点的店照常营业。 |
 | 2:40 | 选 **Bubble Tea Shop**，等两位模拟盟友投票，点 **Count the votes**。 | 经典路线中 Mina 选奶茶，Kit 选电玩，奶茶以 2:1 胜出。这条路线改投咖啡会出现 1:1:1 平票，奶茶按候选顺序胜出。开票后才开始装修，此时刷新仍应停在装修阶段。 |
 | 3:10 | 点 **Advance to next day**。进新开业的 Pearl Club，再返回商场与街区地图。 | 同一个铺位换了招牌、门面、设备和商品，原来的联盟归属继续保留。 |
 | 3:40 | 打开 **Daily** 对照改造前后，再看 **Insights**。 | 日报记录这次开业。洞察分别标出本人选择、游戏到访、模拟票和待验证的现实问题。 |
 
 第二条可玩路线是进入自家店，选择 **Help manage → Solve emergency**，记住设备亮起的顺序并重放。胜负会改变防守值。**Settings → Demo Director** 提供引导开局、邀请模拟盟友、次日快进和洞察入口。**Settings → New game / Reset demo** 可在确认后清空本次游戏并重演。退出后在相同浏览器和地址重新打开，可继续已保存的世界。
 
-## 势力图与美术
+## 从总图逛六个地点
 
-打开 **Territories / 势力图**，先点 **车站商段 / Station Walk** 或 **公园商段 / Park Parade** 放大街段，再点招牌进入具体店铺。每段都有三个门面。车站侧的 01 是甜甜圈店，03 是电玩店，06 是火锅店。公园侧能找到寿司店、咖啡店和便利店。这两个街段及势力边界是 Demo 的示意划分，六个铺位都在新都城中心二期。
+点击宝琳总图的地名，就会进入那个地点的像素近景。也可以先逛店，再从柜台选择偏好、加入联盟。**势力图 / Territories** 显示本地铺位的归属，地点招牌显示我方占有数。点店门进内景，按右上角的地点名回到刚才的场景。
 
-用潮流派开局，先找到已经挂着本方徽记的 03。拿下隔壁 01 后，两店之间的边界变淡，01 落闸，06 仍照常营业。投奶茶、推进一天，再从新店返回同一街段，01 原址已经换上奶茶店招牌。接着可以走进 06 发起下一次争夺，把车站侧从 **2 / 3** 推到 **3 / 3**。公园侧三家店各自保留原归属。
+| 地点 | 近景里可以逛的店 |
+| --- | --- |
+| 宝翠公园 | 在球场和树荫步道旁找 07 柠檬水亭、08 风筝工房和 09 轮滑租用站。 |
+| 宝琳站 | 在站内找到 10 明信片印铺、11 饭团档和 12 雨伞档。 |
+| 宝林邨 | 在屋邨楼下走访 13 鲜花档、14 修配铺和 15 面包铺。 |
+| 新都城中心三期 | 在三期的商廊逛 16 唱片铺、17 陶艺工房和 18 胶片相机店。 |
+| 新都城中心一期 | 在一期的市集找 19 面档、20 裁缝铺和 21 书店。 |
+| 新都城中心二期 | 原两层中庭的 01–06 号铺在原位。甜甜圈改奶茶的课堂路线从这里开始。 |
 
-![同一局游戏的四个时刻：01 落闸、原址奶茶开业、06 易主，03 电玩店始终营业](docs/screenshots/station-side-growth.webp)
+**公园试玩路线**　用潮流派入盟，在公园进 07 柠檬水亭。邀请两名队友，一起按订单递上青柠冰饮、西柚汽水或柠檬汽水。占领后回地图看公园从 **1/3** 变成 **2/3**，再入园看 07 落闸。联盟可以把它改为风筝工房或轮滑租用站，次日新店沿用 07 号铺。08、09 的归属与经营进度分别保留。
 
-[次日三个门面的静态截图](docs/screenshots/17-street-storefronts.jpg) · [占领前的街区全图](docs/screenshots/04-district-map.jpg) · [占领后的全图](docs/screenshots/16-territory-zh.jpg) · [手机上的势力图](docs/screenshots/16-territory-zh-390.jpg)
+![宝翠公园的实机近景，球场旁有三家独立小店](docs/screenshots/area-park.jpg)
 
-宝琳底图与左上角 Agentopia Logo 均来自团队授权沿用的 [Agentopia 香港地图](https://cciwang.github.io/Agentopia_HKdemo/)。1448 × 1086 的原图保留了宝翠公园球场、屋邨塔楼、弯道、玻璃顶商场和宝琳站。PolamLife 在画面上叠加可点击地标、商场铺位归属和开业消息，界面延续深紫、粉紫与淡紫的色调。两层商场、店面、小游戏及社区改造规则由本项目制作。截图全部来自实际运行画面。[美术规范](docs/art-bible.md) · [素材来源与授权范围](docs/assets.md) · [参考对照记录](docs/reference-study.md)
+[车站](docs/screenshots/area-station.jpg) · [宝林邨](docs/screenshots/area-estate.jpg) · [新都城三期](docs/screenshots/area-discovery.jpg) · [新都城一期](docs/screenshots/area-one.jpg) · [风筝工房内景](docs/screenshots/inside-park-kite.jpg) · [公园铺位易主](docs/screenshots/area-park-captured.jpg) · [次日开业](docs/screenshots/area-park-open.jpg)
+
+宝琳底图与左上角 Agentopia Logo 均来自团队授权沿用的 [Agentopia 香港地图](https://cciwang.github.io/Agentopia_HKdemo/)。1448 × 1086 的原图保留了宝翠公园球场、屋邨塔楼、弯道、玻璃顶商场和宝琳站。PolamLife 在画面上叠加可点击地标、商场铺位归属和开业消息，界面延续深紫、粉紫与淡紫的色调。六个地点的近景、商铺和商品均为本 Demo 创作。店名和铺位属于虚构设定。截图全部来自实际运行画面。[美术规范](docs/art-bible.md) · [素材来源与授权范围](docs/assets.md) · [参考对照记录](docs/reference-study.md)
 
 | 商场与玩法 | 联盟与社区结果 |
 | --- | --- |
@@ -96,16 +106,16 @@ flowchart LR
 
 | 功能 | 状态 | 审查重点 |
 | --- | --- | --- |
-| 偏好选择、联盟、势力图 | Implemented | 三项偏好驱动推荐，玩家可另选。两段商街各有三家可进入的店，街段计数和相邻边界取自实际归属。 |
-| 六铺位争夺、投票与改造 | Implemented | 同一单元 ID 贯穿地图、商场、内景、归属和日报。 |
+| 偏好选择、联盟、势力图 | Implemented | 三项偏好驱动推荐，玩家可另选。六个地点分别计数，铺位颜色和相邻边界取自真实存档。 |
+| 21 铺位争夺、投票与改造 | Implemented | 同一单元 ID 贯穿地图、商场、内景、归属和日报。 |
 | 订单高峰与柜台接力 | Implemented | 两种限时玩法分别要求商品匹配和顺序记忆。接单支援随实际到场/值守成员生效。 |
 | 英文 / 简体中文 | Implemented | 游戏中途可切换。存档中的 ID、投票、计时和原始事件记录保持连续。 |
 | 联盟成员与投票 | Simulated | 每个联盟两位具名 Bot。各自从候选中选出自己排序最高的一项，票数来自逐人投票记录。 |
 | 次日开业 | Implemented | 装修跨一个游戏日，可手动快进。现实中过一晚不会自动完成装修。 |
-| 社区范围与防守 | Partial | 六个地标，一座可进入的商场。防守值、值班、装饰和挑战失败均可体验；尚无主动发起夺回战的敌对 AI。 |
+| 社区范围与防守 | Partial | 六个地点各有独立近景，二期六铺，其余各三铺。防守值、值班、装饰和挑战失败均可体验；尚无主动发起夺回战的敌对 AI。 |
 | 商户洞察 | Partial / Simulated | 本人排序、票与到访来自本地存档。地理偏好对比是预设样例，商户问题是假设。 |
 | 多人在线、账户、跨设备同步 | Not Implemented | 存档位于当前浏览器。模拟盟友和本地保护无法提供在线防作弊保障。 |
-| 长期胜负、留存和商业模式 | TBD | 六个铺位全归己方即完成可演示内容。居民是否会回来、商户是否愿意采用均需验证。 |
+| 长期胜负、留存和商业模式 | TBD | 21 个铺位全归己方即完成可演示内容。居民是否会回来、商户是否愿意采用均需验证。 |
 
 ## 代码在哪里
 
@@ -116,8 +126,8 @@ flowchart LR
 | [index.html](index.html)、[src/app.js](src/app.js) | 浏览器入口、场景导航、HUD、回合调度、投票和存档写入。 |
 | [src/game.js](src/game.js) | 联盟及成员偏好、初始店铺、RULES、推荐、占领和投票结算。 |
 | [src/save.js](src/save.js) | 存档结构验证、旧版恢复、非法阶段或视图的处理。 |
-| [src/world.js](src/world.js)、[src/world.css](src/world.css) | 街区相机、商场入口、店面、内景及势力图渲染。两条商街的铺位分组、门面坐标和边界点列在 [src/streets.js](src/streets.js)。 |
-| [src/rounds.js](src/rounds.js)、[src/rounds.css](src/rounds.css) | 两个小游戏的输入、队友支援、时限和结算生命周期。 |
+| [src/world.js](src/world.js)、[src/world.css](src/world.css) | 街区相机、商场入口、店面、内景及势力图渲染。[src/regions.js](src/regions.js) 定义区域、业态和铺号；[src/region-layout.js](src/region-layout.js) 定义门面落点与地块边界。 |
+| [src/rounds.js](src/rounds.js)、[src/rounds.css](src/rounds.css) | 两个小游戏的输入、队友支援和结算。新增 15 种业态各有三款双语订单，见 [src/regional-products.js](src/regional-products.js)。 |
 | [src/community.js](src/community.js) | 从事件、投票和改造历史生成日报与商户洞察。 |
 | [src/i18n.js](src/i18n.js) | 就地切换显示语言，三个 locale 词表覆盖界面、场景和经营活动。 |
 | [assets/](assets/)、[tools/](tools/) | 已生成的图像、原创绘图脚本与离线打包器。正常试玩直接读取素材。 |
@@ -134,8 +144,8 @@ flowchart LR
 试玩时可以记录以下三个问题。
 
 - 队友实际救过你一次错单或延长了时间后，结盟是否比单纯等待成员签到更有意义？
-- 车站侧从 **1 / 3** 变成 **2 / 3** 时，你能否认出刚赢下的店和仍属对手的邻店？次日的店面变化是否足以让你再来看看？
-- 反复改造后，有限店型可能同名，按铺号仍可区分。现有六铺能否支撑课堂以外的重复游玩？一次存档的选择值得提出哪些调研问题？
+- 公园从 **1 / 3** 变成 **2 / 3** 时，你能否认出刚赢下的店和仍属对手的邻店？次日的店面变化是否足以让你再来看看？
+- 反复改造后，有限店型可能同名，按铺号仍可区分。21 个铺位能否支撑课堂以外的重复游玩？一次存档的选择值得提出哪些调研问题？
 
 ## 给另一位 Codex 的只读审查提示词
 

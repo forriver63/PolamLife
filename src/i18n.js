@@ -3,11 +3,16 @@
 import { uiText, uiPatterns } from "./locale-ui.js";
 import { activityText, activityPatterns } from "./locale-activities.js";
 import { worldText, worldPatterns } from "./locale-world.js";
+import { REGIONAL_TYPES } from "./regions.js";
 
 const preferenceKey = "polamlife.language";
 const skipSelector = '[translate="no"], script, style';
 const attributes = ["aria-label", "title", "alt", "aria-description", "aria-roledescription"];
 const lexicon = new Map();
+for (const type of Object.values(REGIONAL_TYPES)) {
+  lexicon.set(type.name.toLowerCase(), type.cn);
+  lexicon.set(type.shopName.toLowerCase(), type.shopNameCn);
+}
 for (const wordlist of [uiText, activityText, worldText]) {
   for (const [source, translation] of Object.entries(wordlist)) {
     lexicon.set(source.toLowerCase(), translation);

@@ -10,6 +10,8 @@ import {
   TYPES,
 } from "../src/game.js";
 import { readSave } from "../src/save.js";
+import { CENTRAL_TYPES, REGIONS, regionOfShop } from "../src/regions.js";
+import { chinese } from "../src/i18n.js";
 
 const act = (state, type, args = {}) => reduce(state, { type, ...args });
 function joined(id = "trend") {
@@ -327,13 +329,22 @@ test("the save reader restores old v1 ballots and every campaign phase", () => {
     act(refit, "ADVANCE"),
   ];
   for (const state of stages) {
+    const sixUnits = structuredClone(state);
+    sixUnits.version = 1;
+    for (const id of Object.keys(sixUnits.shops)) {
+      if (REGIONS.central.units.includes(id)) continue;
+      delete sixUnits.shops[id];
+      delete sixUnits.visits[id];
+    }
     const saved = readSave(
-      JSON.stringify({ state, view: { scene: "shop", shopId: "unit02" } }),
+      JSON.stringify({ state: sixUnits, view: { scene: "shop", shopId: "unit02" } }),
       {},
     );
     assert.equal(saved.status, "ready");
     assert.deepEqual(saved.state, state);
     assert.equal(saved.view.shopId, "unit02");
+    assert.equal(saved.view.region, "central");
+    assert.deepEqual(readSave(JSON.stringify(saved), {}).state, saved.state);
   }
 });
 
@@ -357,6 +368,7 @@ test("malformed worlds enter recovery while bad view references preserve a valid
   assert.deepEqual(saved.state, state);
   assert.deepEqual(saved.view, {
     scene: "map",
+    region: "central",
     loc: null,
     shopId: "unit01",
     mapShopId: null,
@@ -380,6 +392,18 @@ test("malformed worlds enter recovery while bad view references preserve a valid
     (s) => {
       s.proposal = null;
     },
+    (s) => {
+      s.shops.unit07.type = "tea";
+    },
+    (s) => {
+      s.shops.unit07.location = "station";
+    },
+    (s) => {
+      s.proposal.options[0] = "umbrella";
+    },
+    (s) => {
+      s.version = 1;
+    },
   ]) {
     const damaged = structuredClone(state);
     breakSave(damaged);
@@ -388,6 +412,49 @@ test("malformed worlds enter recovery while bad view references preserve a valid
       "unreadable",
     );
   }
+});
+
+test("the five new locations have distinct traders and offer only local replacements", () => {
+  const allStartingTypes = new Set();
+  for (const [location, area] of Object.entries(REGIONS)) {
+    if (location === "central") continue;
+    assert.equal(area.units.length, 3);
+    const state = joined();
+    for (const id of area.units) {
+      const shop = state.shops[id];
+      assert.equal(shop.location, location);
+      assert.equal(regionOfShop(id), location);
+      assert.ok(!CENTRAL_TYPES.includes(shop.type));
+      assert.ok(!allStartingTypes.has(shop.type));
+      allStartingTypes.add(shop.type);
+      assert.notEqual(chinese(TYPES[shop.type].shopName), TYPES[shop.type].shopName);
+    }
+    const target = area.units.find((id) => state.shops[id].owner !== "trend");
+    let playing = invite(act(state, "CHALLENGE", { shopId: target }));
+    playing = act(playing, "RESULT", {
+      shopId: target, contestId: playing.contest.id, sessionId: playing.sessionId,
+      game: "rush", roundId: "district-rush", success: true,
+    });
+    playing = act(playing, "PROPOSE");
+    const choices = area.types.filter((type) => type !== state.shops[target].type);
+    assert.deepEqual(playing.proposal.options, choices);
+    assert.equal(act(playing, "VOTE", { memberId: "player", choice: "tea" }), playing);
+    for (const members of Object.values(ALLIANCES).map((alliance) => alliance.members))
+      for (const member of members) assert.ok(choices.includes(memberChoice(member.id, choices)));
+    const refitting = act(cast(playing), "CLOSE_VOTE");
+    const restored = readSave(JSON.stringify({
+      state: refitting, view: { scene: "shop", region: "central", shopId: target },
+    }), {});
+    assert.equal(restored.view.region, location);
+    const reopened = act(restored.state, "ADVANCE");
+    assert.equal(reopened.shops[target].owner, "trend");
+    assert.equal(reopened.shops[target].location, location);
+    assert.ok(choices.includes(reopened.shops[target].type));
+    assert.ok(chinese(reopened.events.at(-1).text).includes(area.cn));
+    for (const id of Object.keys(state.shops))
+      if (id !== target) assert.deepEqual(reopened.shops[id], state.shops[id]);
+  }
+  assert.equal(allStartingTypes.size, 15);
 });
 
 test("street focus survives refresh and old saves return to the correct storefront", () => {

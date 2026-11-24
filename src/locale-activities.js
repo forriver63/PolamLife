@@ -1,5 +1,8 @@
 // Player and simulation records keep their English source strings across language switches.
+import { orderTranslations } from "./regional-products.js";
+
 export const activityText = {
+  ...orderTranslations,
   "Bubble Tea Shop": "奶茶店",
   "Gaming Store": "电玩店",
   "Hot Pot Restaurant": "火锅店",
@@ -146,7 +149,7 @@ const formats = [
   [/^(.+) hung its pennants over (.+)\.$/, (m, tr) => tr(m[1]) + "在" + tr(m[2]) + "挂起了联盟彩旗。"],
   [/^(.+) opened a ballot for the vacant counter\.$/, (m, tr) => tr(m[1]) + "发起投票，决定空铺的新业态。"],
   [/^(.+) won the ballot\. The crew starts fitting out the shop\.$/, (m, tr) => tr(m[1]) + "赢得投票。队员们开始装修店铺。"],
-  [/^(.+) opened in MCP Central, in the former home of (.+)\.$/, (m, tr) => tr(m[1]) + "在新都城中心二期开张了。这个铺位原来是" + tr(m[2]) + "。"],
+  [/^(.+) opened in (.+), in the former home of (.+)\.$/, (m, tr) => tr(m[1]) + "在" + tr(m[2]) + "开张了。这个铺位原来是" + tr(m[3]) + "。"],
   [/^(.+) opened in the former home of (.+)\.$/, (m, tr) => tr(m[1]) + "开张了。这个铺位原来是" + tr(m[2]) + "。"],
   [/^([A-Za-z]+) favors ([^.]+)\. ([A-Za-z]+) favors ([^.]+)\. The earliest listed proposal wins a tied ballot\.$/, (m, tr) => m[1] + " 想开" + tr(m[2]) + "，" + m[3] + " 想开" + tr(m[4]) + "。若票数相同，排在前面的提案胜出。"],
 ];

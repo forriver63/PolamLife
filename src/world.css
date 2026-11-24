@@ -125,7 +125,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform: translate(-50%, -100%) scale(var(--w-counter-zoom, 1));
+  transform: translate(calc(-50% + var(--w-sign-offset, 0%)), -100%)
+    scale(var(--w-counter-zoom, 1));
   transform-origin: bottom center;
   background: transparent;
   color: var(--w-pine);
@@ -183,7 +184,7 @@
 .w-marker-foot {
   position: absolute;
   bottom: 5px;
-  left: 50%;
+  left: calc(50% - var(--w-sign-offset, 0%));
   width: 8px;
   height: 8px;
   margin-left: -4px;
@@ -210,100 +211,6 @@
 }
 .w-place:active .w-place-sign {
   transform: translateY(1px);
-}
-.w-place-main {
-  z-index: 5;
-  padding-bottom: 28px;
-}
-.w-place-main::after {
-  content: "";
-  position: absolute;
-  bottom: 9px;
-  width: 1px;
-  height: 21px;
-  background: #f1c7e6;
-  box-shadow: 1px 0 #573763;
-}
-.w-place-main .w-place-sign {
-  translate: -16% 0;
-}
-.w-place[data-location="station"] .w-place-sign {
-  translate: 33% 0;
-}
-.w-place[data-location="discovery"] .w-place-sign {
-  translate: -31% 0;
-}
-.w-place-main .w-place-sign {
-  min-height: 41px;
-  background: #492a59;
-  border: 2px solid #f4b6ec;
-  padding: 3px 8px 4px 5px;
-  box-shadow:
-    0 0 0 1px #402248,
-    inset 0 -2px 0 #2e183a;
-  color: #ffefff;
-}
-.w-place-main:hover .w-place-sign,
-.w-place-main:focus-visible .w-place-sign {
-  background: #64416c;
-}
-.w-place-main .w-place-copy strong {
-  font-size: clamp(14px, 1.15vw, 18px);
-}
-.w-place-main .w-place-copy small {
-  color: #f2c9ee;
-}
-.w-place-main .w-place-icon {
-  width: 33px;
-  height: 31px;
-}
-.w-place-main .w-place-icon img {
-  width: 33px;
-  height: 33px;
-}
-.w-place-main .w-marker-foot {
-  background: #e7abd5;
-}
-.w-enter-arrow {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  color: #f1aedb;
-}
-.w-signal {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 17px;
-  padding: 3px 6px 4px;
-  margin-top: -1px;
-  background: #35203f;
-  color: #f6d9ef;
-  font:
-    650 8px/1.2 ui-monospace,
-    monospace;
-  letter-spacing: 0.03em;
-  border: 1px solid #b987b6;
-  border-radius: 0 0 4px 4px;
-}
-.w-tiny-flag {
-  width: 7px;
-  height: 8px;
-  background: var(--w-owner);
-  clip-path: polygon(0 0, 100% 0, 100% 74%, 50% 100%, 0 75%);
-}
-.w-live {
-  color: #ffeff7;
-}
-.w-light {
-  width: 5px;
-  height: 5px;
-  background: #f1a8d4;
-  border-radius: 50%;
-  box-shadow: 0 0 5px #f3a0de;
-  animation: w-blink 1.9s ease-in-out infinite;
 }
 .w-controls {
   position: absolute;
@@ -764,170 +671,38 @@
 .w-mall .w-stroll {
   width: clamp(33px, 3.5vw, 62px);
 }
-.w-scene .w-rooftop {
-  position: absolute;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  width: 36px;
-  height: 31px;
-  transform: translate(-50%, -100%) skewY(-5deg);
-  background: #fff2fc;
-  border: 3px solid var(--sign-edge);
-  box-shadow: 2px 2px 0 #5a485d;
-  border-radius: 5px;
-}
-.w-rooftop .w-sprite {
-  width: 27px;
-  height: 24px;
-}
-.w-rooftop:after {
-  content: "";
-  position: absolute;
-  width: 16px;
-  height: 8px;
-  bottom: -10px;
-  border-inline: 3px solid #70596f;
-}
-.w-rooftop:hover {
-  filter: brightness(1.1);
-}
-
-.w-influence-on .w-art {
-  filter: saturate(0.66) brightness(0.92);
-}
+/* District ownership follows individual shops. Internal borders recede when
+   adjacent plots share a flag, while the illustrated street stays visible. */
 .w-commerce-map {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   z-index: 1;
-  overflow: visible;
   pointer-events: none;
 }
 .w-domain-fill {
-  fill-opacity: 0.43;
+  fill-opacity: 0.4;
   pointer-events: visiblePainted;
-  transition: fill-opacity 0.16s;
-}
-.w-commerce-map:not(.w-territories) .w-domain-fill {
-  pointer-events: none;
-  fill-opacity: 0;
-}
-.w-commerce-map:not(.w-territories) :is(.w-domain-line, .w-line-casing) {
-  display: none;
-}
-.w-segment-zone {
-  outline: none;
   cursor: pointer;
 }
-.w-territories .w-segment-zone:hover .w-domain-fill {
-  fill-opacity: 0.52;
-}
-.w-segment-sign,
-.w-overview-unit {
-  pointer-events: visiblePainted;
-}
-.w-segment-sign {
-  color: #fff6fe;
-  filter: drop-shadow(1px 2px 2px #39203796);
-}
-.w-segment-sign rect {
-  fill: #3d2747;
-  stroke: #efc5df;
-  stroke-width: 1.6px;
-}
-.w-segment-zone:focus-visible .w-segment-sign rect {
-  stroke: #ffebae;
-  stroke-width: 4px;
-}
-.w-segment-name {
-  fill: #fff3fa;
-  font: 800 14px var(--sans);
-}
-.w-segment-sub {
-  fill: #ead1e4;
-  font: 550 9px var(--sans);
-}
-.w-segment-tally {
-  fill: #ffe4a7;
-  font: 750 14px var(--mono);
-}
-.w-overview-unit circle {
-  stroke: #423244;
-  stroke-width: 1.5px;
-}
-.w-overview-unit text {
-  fill: #382637;
-  text-anchor: middle;
-  font: 800 10px var(--mono);
-  pointer-events: none;
-}
-.w-commerce-map:not(.w-territories) .w-overview-unit {
-  display: none;
-}
-.w-map-overview .w-segment-sign {
-  transform: scale(calc(var(--w-mini-scale) * 0.62));
-}
-.w-map-overview .w-overview-unit circle {
-  stroke-width: 2.5;
-}
-/* At district scale the mall already has a landmark. Its separate rooftop stamp
-   otherwise sits over the eastern street's ownership tally. */
-.w-map-overview.w-influence-on .w-rooftop {
-  display: none;
-}
-.w-map:not([data-focused-segment=""])
-  :is(.w-place, .w-person, .w-rooftop, .w-segment-marker, .w-overview-unit) {
-  display: none;
-}
-.w-map:not([data-focused-segment=""])
-  .w-segment-zone:not([aria-pressed="true"])
-  .w-domain-fill {
-  fill-opacity: 0.14;
-}
-.w-map:not([data-focused-segment=""])
-  .w-segment-zone[aria-pressed="true"]
-  .w-domain-fill {
-  fill-opacity: 0.31;
-}
-.w-map:not([data-focused-segment=""])
-  .w-commerce-map:not(.w-territories)
-  .w-domain-fill {
-  fill-opacity: 0;
-}
-.w-overview-unit circle.w-claim-ring {
-  fill: none;
-  stroke: #ffe9ab;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 2px #4b2b27);
-  pointer-events: none;
-}
-.w-domain-line,
-.w-line-casing {
-  fill: none;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  pointer-events: none;
-}
-.w-line-casing {
-  stroke: #493548;
-  stroke-width: 5;
-  opacity: 0.86;
+.w-parcels:hover .w-domain-fill {
+  fill-opacity: 0.57;
 }
 .w-domain-line {
-  stroke: #fff2e5;
-  stroke-width: 2.1;
+  fill: none;
+  stroke: #fff4e6;
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1px #38213c);
 }
 .w-domain-line[data-edge="internal"] {
-  stroke: #563c50;
-  stroke-width: 1.5;
-  stroke-dasharray: 2 6;
-  opacity: 0.72;
-}
-.w-domain-line[data-edge="perimeter"] {
-  stroke-width: 1.45;
+  stroke: #543e59;
+  stroke-opacity: 0.55;
+  stroke-width: 0.65;
+  stroke-dasharray: 2 3;
+  filter: none;
 }
 .w-territory-key {
   position: absolute;
@@ -1021,32 +796,6 @@
   color: #34253c;
   clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
 }
-.w-influence-on
-  .w-place:not(.w-place-main):not(:hover):not(:focus-visible)
-  .w-place-copy {
-  display: none;
-}
-.w-influence-on
-  .w-place:not(.w-place-main):not(:hover):not(:focus-visible)
-  .w-place-sign {
-  min-height: 25px;
-  padding: 0 3px;
-}
-.w-influence-on .w-place:not(.w-place-main) .w-place-sign {
-  translate: 0;
-}
-.w-influence-on .w-place-icon,
-.w-influence-on .w-place-icon img {
-  width: 22px;
-  height: 22px;
-}
-.w-influence-on .w-place-main .w-place-sign {
-  min-height: 34px;
-  border-bottom: 3px solid var(--w-focus-owner);
-}
-.w-influence-on .w-place-main .w-place-copy small {
-  display: none;
-}
 .viewport:has(.w-influence-on) .scene-card {
   max-width: min(267px, calc(100% - 60px));
 }
@@ -1075,9 +824,6 @@
     max-width: calc(100% - 78px);
     padding: 5px 8px;
     font-size: 11px;
-  }
-  body:has(.w-influence-on:not([data-focused-segment=""])) #announcer {
-    top: 217px;
   }
   .w-territory-key {
     top: 52px;
@@ -1114,283 +860,303 @@
     font-size: 11px;
   }
 }
-.w-segment-hud {
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 7;
-  width: max-content;
-  max-width: calc(100% - 26px);
-  color: #fff5fd;
-  border: 1.5px solid #d8a8ca;
-  border-radius: 10px;
-  background: #37223feb;
-  box-shadow:
-    0 3px 0 #2e193e60,
-    0 7px 18px #341b3c35;
-  cursor: default;
-  touch-action: manipulation;
+
+.w-place[data-location="station"] {
+  --w-sign-offset: 30%;
 }
-.w-segment-nav,
-.w-street-headline,
-.w-street-change,
-.w-segment-hud button {
+.w-place[data-location="discovery"] {
+  --w-sign-offset: -28%;
+}
+.w-place-holdings {
   display: flex;
   align-items: center;
+  gap: 2px;
 }
-.w-segment-nav {
-  justify-content: space-between;
-  gap: 12px;
-  border-bottom: 1px solid #92708d90;
-  padding: 0 5px;
+.w-place-holdings i {
+  height: 7px;
+  width: 6px;
+  background: var(--w-owner);
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);
 }
-.w-segment-hud button {
-  gap: 4px;
-  font: 650 11px var(--sans);
-  padding: 6px 7px;
-  color: #f1d7eb;
-  background: transparent;
-}
-.w-segment-hud button:hover {
-  color: white;
-  background: #63405e;
-}
-.w-street-headline {
-  gap: 8px;
-  padding: 7px 11px;
-}
-.w-street-headline img {
-  width: 28px;
-  height: 25px;
-}
-.w-street-headline strong {
-  font: 800 20px/1.04 var(--display);
-  letter-spacing: -0.03em;
-}
-.w-street-holdings {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  padding: 4px 6px;
-  border: 1px solid #a9819e;
-  background: #56325c;
-  border-radius: 4px;
-  color: #ffedb9;
-  white-space: nowrap;
-}
-.w-street-holdings small {
-  font: 600 10px var(--sans);
-}
-.w-street-count {
-  font: 750 13px var(--mono);
-}
-.w-street-mix {
-  margin-left: auto;
-  color: #ecd5e6;
-  font: 550 10px var(--sans);
-}
-.w-street-change {
-  justify-content: center;
-  gap: 5px;
-  flex-wrap: wrap;
-  border-top: 1px solid #92708d90;
-  padding: 4px 8px;
-  color: #f4dcb5;
-  font: 650 10px/1.2 var(--sans);
-}
-.w-street-change strong {
-  color: #ffedb1;
-}
-.w-map .w-map-store {
-  position: absolute;
-  z-index: 4;
-  width: var(--w-store-width, 145px);
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  transform: translate(-50%, -50%) scale(var(--w-store-counter, 1));
-  transform-origin: center;
-  color: #fff9e7;
-  background: transparent;
-  filter: drop-shadow(2px 4px 2px #321d3b88);
-}
-.w-map-store:hover,
-.w-map-store:focus-visible {
-  z-index: 6;
-  filter: drop-shadow(0 0 4px #fff6d8) drop-shadow(2px 4px 2px #321d3b88);
-}
-.w-street-unit {
-  position: absolute;
-  z-index: 2;
-  bottom: 100%;
-  left: 0;
-  padding: 3px 5px;
+.w-place-copy small.w-place-tally {
+  display: inline;
+  margin-left: 4px;
   font: 750 9px/1.1 var(--mono);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border: 1px solid #54344b;
-  border-bottom: 0;
-  border-radius: 3px 3px 0 0;
-  background: #fff1db;
-  color: #4d3545;
+  letter-spacing: 0.01em;
 }
-.w-map-front {
-  position: relative;
+.w-claim-tag {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  z-index: 2;
+  padding: 2px 4px;
+  border: 1px solid #7f5539;
+  border-radius: 4px;
+  color: #55343a;
+  background: #ffdb85;
+  font: 800 8px/1 var(--mono);
+}
+.w-place[data-last-claim] .w-place-sign,
+.w-return-region .w-place-sign {
+  box-shadow:
+    0 0 0 2px #ffd57f,
+    0 2px 3px #58365485;
+}
+.w-mall {
+  background: #392a42;
+}
+.w-mall::before {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  background:
+    linear-gradient(#37263c9c, #362540a8),
+    var(--w-scene-art) center/cover;
+  filter: blur(14px);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.w-mall .w-art,
+.w-shop .w-art {
+  image-rendering: pixelated;
+}
+.w-local-door {
+  position: absolute;
+  z-index: 3;
+  left: var(--w-door-x);
+  top: var(--w-door-y);
+  width: 22%;
   display: block;
-  line-height: 0;
-  overflow: hidden;
-  border: 2px solid #5a4451;
-  border-bottom: 0;
-  border-radius: 2px 2px 0 0;
-  background: #5a4451;
+  padding: 0;
+  background: transparent;
+  color: #38293b;
+  transform: translate(-50%, -100%);
 }
-.w-map-frontart {
+.w-local-front {
   display: block;
   width: 100%;
   height: auto;
   image-rendering: pixelated;
 }
-.w-front-name {
+.w-local-door:hover .w-local-front,
+.w-local-door:focus-visible .w-local-front {
+  filter: drop-shadow(0 0 2px #ffe69c) brightness(1.07);
+}
+.w-local-caption {
   position: absolute;
-  inset: 0 0 auto;
-  height: 21.75%;
+  left: 50%;
+  top: 91%;
+  transform: translateX(-50%);
+  min-width: 65%;
+  max-width: 107%;
+  display: grid;
+  justify-items: center;
+  pointer-events: auto;
+}
+.w-local-sign {
+  display: flex;
+  align-items: stretch;
+  max-width: 100%;
+  padding: 0;
+  border: 1px solid #49334e;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff3dd;
+  box-shadow: 1px 2px 0 #49354a65;
+}
+.w-local-sign b {
   display: grid;
   place-items: center;
-  color: #fff6db;
-  text-shadow: 0 1px 1px #59494c;
-  font: 800 clamp(11px, 1.05vw, 16px) / 1 var(--sans);
+  background: #4d3453;
+  color: #fff4dd;
+  font: 750 clamp(9px, 0.7vw, 12px) / 1 var(--mono);
+  padding: 3px 5px;
 }
-.w-store-owner {
-  position: relative;
-  display: flex;
-  gap: 5px;
+.w-local-sign strong {
+  font: 800 clamp(11px, 1vw, 16px) / 1.1 var(--sans);
+  text-align: center;
+  padding: 4px 6px;
+  overflow-wrap: break-word;
+}
+.w-local-flag {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  background: #3b2944;
-  padding: 4px 5px;
-  color: #fff5fc;
-  border: 1px solid #6a4a67;
-  border-top: 2px solid var(--w-owner);
-  font: 650 12px/1 var(--sans);
+  gap: 3px;
+  white-space: nowrap;
+  padding: 2px 5px;
+  background: #412d47;
+  color: #fff9ea;
+  border-radius: 0 0 3px 3px;
+  font: 620 clamp(9px, 0.72vw, 12px) / 1.1 var(--sans);
 }
-.w-store-owner .w-faction-badge {
-  width: 17px;
+.w-local-flag .w-faction-badge {
+  width: 13px;
+  height: 14px;
+}
+.w-local-flag svg {
+  width: 10px;
+  height: 10px;
+}
+.w-local-status {
+  padding: 3px 5px;
+  margin-top: 2px;
+  border-radius: 3px;
+  background: #ffe7b0;
+  color: #492f3a;
+  text-align: center;
+  font: 750 clamp(9px, 0.7vw, 12px) / 1.12 var(--sans);
+}
+.w-local-door[aria-current="true"] .w-local-sign,
+.w-shop-door[aria-current="true"] .w-unit {
+  outline: 2px solid #ffd981;
+}
+.w-local-door .w-bunting {
+  inset: 31% 15% auto;
+  height: 12%;
+}
+.w-region-hud {
+  position: absolute;
+  z-index: 4;
+  top: 21px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  max-width: 43%;
+  padding: 5px 9px;
+  border: 1px solid #dab2d6;
+  border-radius: 5px;
+  background: #432c4bf0;
+  color: #fff1e3;
+  font: 700 12px/1.2 var(--sans);
+  box-shadow: 0 2px 0 #422c4260;
+  pointer-events: none;
+}
+.w-region-hud strong {
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+.w-region-hud .w-faction-badge {
+  height: 16px;
+  width: 15px;
+}
+.w-region-hud .w-faction-badge svg {
+  width: 12px;
+}
+.w-recent-gain {
+  padding-left: 7px;
+  border-left: 1px solid #a2809f;
+  font: 650 10px/1.2 var(--sans);
+  color: #ffe3a0;
+}
+.w-compact .w-place {
+  padding-bottom: 6px;
+}
+.w-compact .w-place-sign {
+  min-height: 23px;
+  gap: 2px;
+  padding: 2px 4px 2px 2px;
+}
+.w-compact .w-place-copy strong {
+  font-size: 10px;
+}
+.w-compact .w-place-icon,
+.w-compact .w-place-icon img {
+  width: 16px;
   height: 18px;
 }
-.w-store-owner .w-faction-badge svg {
-  width: 12px;
-  height: 12px;
+.w-compact .w-place-copy small.w-place-tally {
+  font-size: 8px;
 }
-.w-store-phase {
-  position: absolute;
-  top: 100%;
-  align-self: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  width: max-content;
-  max-width: 135%;
-  padding: 4px 6px;
-  background: #fff1cd;
-  color: #503e30;
-  border: 1px solid #7a6154;
-  border-radius: 0 0 4px 4px;
-  font: 700 10px/1.15 var(--sans);
-  text-align: center;
+.w-compact .w-place-holdings {
+  gap: 1px;
 }
-.w-store-phase i {
-  width: 5px;
+.w-compact .w-place-holdings i {
+  width: 4px;
   height: 5px;
-  border-radius: 50%;
-  background: #9c6944;
-  flex: none;
 }
-.w-map-store[aria-current="true"] .w-map-front {
-  outline: 2px solid #fff1c1;
-  outline-offset: 1px;
+.w-compact .w-place[data-location="station"] {
+  --w-sign-offset: 18%;
 }
-.w-map-store[data-recent-store] .w-street-unit {
-  color: #44311d;
-  background: #ffdd92;
+.w-compact .w-place[data-location="discovery"] {
+  --w-sign-offset: -40%;
 }
-.w-map-store[data-phase="reopened"] .w-store-phase {
-  background: #d5f1d7;
-  color: #345443;
+.w-compact .w-marker-foot {
+  bottom: 0;
 }
-.w-map-store[data-phase="contested"] .w-store-phase {
-  background: #ffd9cc;
-  color: #67393a;
+.w-compact .w-region-hud {
+  top: 58px;
+  left: 12px;
+  transform: none;
+  max-width: calc(100% - 24px);
+  font-size: 10px;
 }
-@media (max-width: 780px) {
-  .w-segment-hud {
-    top: 54px;
-  }
-  .w-segment-nav {
-    gap: 5px;
-  }
-  .w-street-headline {
-    padding: 5px 8px;
-    gap: 5px;
-  }
-  .w-street-headline strong {
-    font-size: 16px;
-  }
-  .w-street-headline img {
-    width: 19px;
-    height: 19px;
-  }
-  .w-street-holdings {
-    padding: 3px;
-    gap: 3px;
-  }
-  .w-street-holdings small {
-    font-size: 9px;
-  }
-  .w-street-count {
-    font-size: 11px;
-  }
-  .w-street-mix {
-    font-size: 9px;
-  }
-  .w-map:not([data-focused-segment=""]) .w-territory-key {
-    top: auto;
-    bottom: 9px;
-    right: 8px;
-  }
-  .w-map:not([data-focused-segment=""]) .w-controls {
-    bottom: 71px;
-  }
-  .w-map:not([data-focused-segment=""])
-    .w-territory-key:not(:has(details[open]))
-    .w-influence-title {
-    display: none;
-  }
-  .w-map:not([data-focused-segment=""]) .w-territory-key:has(details[open]) {
-    z-index: 9;
-  }
-  .viewport:has(.w-map:not([data-focused-segment=""])) .scene-card {
-    max-width: calc(100% - 100px);
-  }
-  .w-front-name {
-    font-size: clamp(9px, 2.15vw, 12px);
-  }
-  .w-store-owner {
-    padding: 3px;
-    font-size: 10px;
-    gap: 3px;
-  }
-  .w-store-owner .w-faction-badge {
-    width: 13px;
-    height: 14px;
-  }
-  .w-street-unit {
-    font-size: 8px;
-  }
-  .w-store-phase {
-    font-size: 9px;
-    padding: 3px;
-  }
+.w-compact .w-local-sign b {
+  padding: 2px;
+  font-size: 8px;
+}
+.w-compact .w-local-sign strong {
+  padding: 3px;
+  font-size: 10px;
+}
+.w-compact .w-local-caption {
+  min-width: 100%;
+  max-width: 116%;
+}
+.w-compact .w-local-flag {
+  font-size: 8px;
+  padding: 2px 3px;
+}
+.w-compact .w-local-flag .w-faction-badge {
+  width: 10px;
+  height: 11px;
+}
+.w-compact .w-shop-door .w-shop-title {
+  font-size: 8px;
+}
+.w-compact .w-shop-door .w-trade-sign {
+  width: 16%;
+}
+.w-compact .w-shop-door .w-unit {
+  margin-top: 0;
+  font-size: 7px;
+  padding: 1px 2px;
+  gap: 2px;
+}
+.w-compact .w-shop-door .w-owner-flag {
+  top: calc(100% + 12px);
+  padding: 1px 3px;
+  font-size: 7px;
+}
+.w-compact .w-controls {
+  bottom: 14px;
+}
+
+/* A phone sees the same outdoor plaza from closer in. Keep the landmarks at
+   their own focal point and stage the three separate sprites along its path. */
+.w-portrait-region .w-art {
+  object-fit: cover;
+  object-position: var(--w-portrait-crop, 50%) center;
+}
+.w-portrait-region .w-local-door {
+  left: var(--w-portrait-x);
+  top: var(--w-portrait-y);
+  width: 39%;
+}
+.w-portrait-region .w-local-door.w-rear-stall {
+  width: 31%;
+}
+.w-portrait-region .w-local-sign strong {
+  font-size: 11px;
+}
+.w-portrait-region .w-local-flag {
+  font-size: 9px;
+}
+
+.w-gain-count {
+  display: inline-block;
+  margin-inline-start: 0.4em;
+  white-space: nowrap;
 }

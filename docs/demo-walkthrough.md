@@ -6,16 +6,16 @@ Allow about four minutes. Start with a fresh local world. The language switch is
 | --- | --- | --- |
 | 0:00 · Enter Po Lam | On the district map, choose **Enter Po Lam**. | Glaze Lane, a fictional donut shop, is the player’s first stop in a recognizable Hong Kong neighborhood. |
 | 0:30 · Find your crew | Rank **Bubble Tea Shop**, **Gaming Store**, then **Café**. Join **The Trendsetters**. | The recommendation follows the ranked picks. Faction colors appear over the illustrated town. The territory count includes the crew’s starting unit at Pixel Port. |
-| 1:00 · Explore the mall | Select **MCP Central → Enter the mall**. Visit Glaze Lane at Unit 01 and open its scout report. | The storefront and report identify the owner before the challenge. |
+| 1:00 · Explore the mall | Select **MCP Central** on the district map. Visit Glaze Lane at Unit 01 and open its scout report. | The storefront and report identify the owner before the challenge. |
 | 1:30 · Take the counter | Launch a challenge, invite both allies and play Shop Rush. Read each ticket and match five products before time expires. | Mina can catch one wrong order. Kit adds four seconds. A successful shift and three crew members capture the shop. |
-| 2:00 · Show the gain | Choose **View territory change**. The map returns to the three doors on Station Walk. Compare Unit 01 with Pixel Port and Little Steam, then select the shuttered Unit 01. | The same unit changes from the Arcade Guild to The Trendsetters. It now owns two of three station-side shops and two of six in the mall. |
+| 2:00 · Show the gain | Choose **View territory change**. The map highlights MCP Central. Enter its atrium and choose the shuttered Unit 01. | The same unit changes from the Arcade Guild to The Trendsetters. It now owns two of six here and six of 21 district-wide. |
 | 2:20 · Decide together | Open the alliance ballot, vote for **Bubble Tea Shop** and wait for Mina and Kit. Choose **Count the votes**. | Mina chooses tea and Kit chooses gaming. With the player’s vote, tea wins 2–1. Renovation keeps the shutters down until Day 02. |
 | 3:00 · See the result | Choose **Advance to next day**. Inspect Pearl Club, the mall frontage and the district map. Open **Daily**. | The new shop occupies the same unit. The paper shows the old and new storefronts together. |
 | 3:40 · Ask a research question | Open **Insights** and compare the ranked picks, ballot and unit visits. | These are one local player’s selections and simulated crew votes. A resident survey could test the resulting merchant question. |
 
 ## Alternate routes
 
-After Pearl Club opens in Unit 01, return to the same street. Pixel Port still serves players at 03 and Little Steam still flies its original flag at 06. Enter 06 and win another challenge to claim all three shops here. The three park-side shops keep their own owners.
+For a second route, select Po Tsui Park on the map. Enter Unit 07, Lemon Lap. Once the Trendsetters capture it, the park counter reads 2/3. Pick a park business on the two-option ballot and advance to opening day. The new park shop opens in Unit 07. The other two park doors and all six mall doors keep their own businesses.
 
 If the crew loses the rush, close the report and launch a fresh challenge from the scout report. At a friendly shop, choose **Help manage** to run a shift, staff the unit or hang pennants. For Service Relay, watch the station signals and repeat the sequence.
 

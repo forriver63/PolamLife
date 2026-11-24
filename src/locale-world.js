@@ -1,4 +1,6 @@
 export const worldText = {
+  "Select a landmark to explore its shops. Colors show each shop’s influence.":
+    "点击地标，走进现场选店。各铺颜色取自所属联盟。",
   "Station Walk": "车站商段",
   "Park Parade": "公园商段",
   "Explore Station Walk": "探索车站商段",

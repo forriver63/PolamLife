@@ -1,3 +1,5 @@
+import { CENTRAL_TYPES, REGIONS, REGIONAL_TYPES } from "./regions.js";
+
 // Temporary playtest values. Change these together with the visible rules of the round.
 export const RULES = Object.freeze({
   minParticipants: 3,
@@ -21,6 +23,7 @@ export const TYPES = {
   sushi: { name: "Sushi Restaurant", shopName: "Roll Call" },
   donut: { name: "Donut Shop", shopName: "Glaze Lane" },
   market: { name: "Convenience Store", shopName: "Neighbour Mart" },
+  ...REGIONAL_TYPES,
 };
 
 export const ALLIANCES = {
@@ -56,44 +59,61 @@ export const ALLIANCES = {
   },
 };
 
-const INITIAL_UNITS = [
-  ["unit01", "donut", "incumbent"],
-  ["unit02", "sushi", "comfort"],
-  ["unit03", "game", "trend"],
-  ["unit04", "cafe", "comfort"],
-  ["unit05", "market", "collective"],
-  ["unit06", "hotpot", "collective"],
-];
-
 const ownKey = (object, key) =>
   typeof key === "string" && Object.hasOwn(object, key);
 const playable = (shop) => shop && ["open", "reopened"].includes(shop.phase);
 
-// Each resident votes for their first available choice, independently of the player.
+// Each resident votes for their first available choice. Ballots draw from one
+// location at a time; each row groups the resident's rankings by location.
 const MEMBER_RANKINGS = {
-  mina: ["tea", "cafe", "game", "donut", "hotpot", "sushi", "market"],
-  kit: ["game", "tea", "hotpot", "market", "sushi", "cafe", "donut"],
-  wai: ["cafe", "sushi", "tea", "market", "hotpot", "donut", "game"],
-  june: ["donut", "cafe", "tea", "sushi", "hotpot", "market", "game"],
-  lok: ["market", "hotpot", "sushi", "tea", "game", "cafe", "donut"],
-  yan: ["hotpot", "sushi", "market", "cafe", "donut", "tea", "game"],
+  mina: [
+    "tea", "cafe", "game", "donut", "hotpot", "sushi", "market",
+    "lemonade", "kite", "skate", "ticketpress", "umbrella", "onigiri", "florist", "bakery", "repair",
+    "ceramics", "camera", "record", "books", "sewing", "noodles",
+  ],
+  kit: [
+    "game", "tea", "hotpot", "market", "sushi", "cafe", "donut",
+    "skate", "kite", "lemonade", "onigiri", "ticketpress", "umbrella", "repair", "bakery", "florist",
+    "camera", "record", "ceramics", "noodles", "books", "sewing",
+  ],
+  wai: [
+    "cafe", "sushi", "tea", "market", "hotpot", "donut", "game",
+    "kite", "lemonade", "skate", "onigiri", "umbrella", "ticketpress", "bakery", "florist", "repair",
+    "record", "ceramics", "camera", "books", "noodles", "sewing",
+  ],
+  june: [
+    "donut", "cafe", "tea", "sushi", "hotpot", "market", "game",
+    "lemonade", "skate", "kite", "ticketpress", "onigiri", "umbrella", "florist", "bakery", "repair",
+    "ceramics", "record", "camera", "sewing", "noodles", "books",
+  ],
+  lok: [
+    "market", "hotpot", "sushi", "tea", "game", "cafe", "donut",
+    "skate", "lemonade", "kite", "umbrella", "onigiri", "ticketpress", "repair", "florist", "bakery",
+    "camera", "ceramics", "record", "sewing", "books", "noodles",
+  ],
+  yan: [
+    "hotpot", "sushi", "market", "cafe", "donut", "tea", "game",
+    "kite", "lemonade", "skate", "onigiri", "umbrella", "ticketpress", "bakery", "repair", "florist",
+    "record", "camera", "ceramics", "noodles", "books", "sewing",
+  ],
 };
 
 export function memberChoice(memberId, options) {
   return MEMBER_RANKINGS[memberId].find((type) => options.includes(type));
 }
 
-function proposalOptions(player, team, currentType) {
-  const replacements = (types) => types.filter((type) => type !== currentType);
+function proposalOptions(player, team, shop) {
+  const tenantPool = REGIONS[shop.location].types;
+  const replacements = (types) => types.filter((type) => type !== shop.type && tenantPool.includes(type));
   const picks = replacements(player.preferences);
   const crewPicks = replacements(team.preferences);
   const shortlist = [
     ...picks.slice(0, 1),
-    ...(currentType === "sushi" ? ["hotpot"] : []),
+    ...(shop.type === "sushi" ? ["hotpot"] : []),
     ...crewPicks.slice(0, 1),
     ...picks,
     ...crewPicks,
-    ...replacements(Object.keys(TYPES)),
+    ...replacements(tenantPool),
   ];
   return [...new Set(shortlist)].slice(0, RULES.proposalCount);
 }
@@ -122,21 +142,20 @@ export function recommend(preferences = []) {
   )[0];
 }
 
-export function createGame() {
+export function initialShops() {
   const shops = {};
-  for (const [id, type, owner] of INITIAL_UNITS) {
-    shops[id] = {
-      id,
-      type,
-      owner,
-      phase: "open",
-      defense: RULES.baseDefense,
-      decorated: false,
-      location: "central",
-    };
+  for (const [location, area] of Object.entries(REGIONS)) {
+    for (const { id, type, owner } of area.lots) {
+      shops[id] = { id, type, owner, location, phase: "open", defense: RULES.baseDefense, decorated: false };
+    }
   }
+  return shops;
+}
+
+export function createGame() {
+  const shops = initialShops();
   return {
-    version: 1,
+    version: 2,
     sessionId: uniqueId("world"),
     day: 1,
     player: { id: "player", name: "You", alliance: null, preferences: [] },
@@ -154,7 +173,7 @@ export function createGame() {
       },
     ],
     results: [],
-    visits: Object.fromEntries(INITIAL_UNITS.map(([id]) => [id, 0])),
+    visits: Object.fromEntries(Object.keys(shops).map((id) => [id, 0])),
   };
 }
 
@@ -243,7 +262,7 @@ export function reduce(state, action) {
         !Array.isArray(prefs) ||
         prefs.length !== 3 ||
         new Set(prefs).size !== 3 ||
-        !prefs.every((type) => ownKey(TYPES, type))
+        !prefs.every((type) => CENTRAL_TYPES.includes(type))
       )
         return state;
       if (JSON.stringify(prefs) === JSON.stringify(player.preferences))
@@ -454,7 +473,7 @@ export function reduce(state, action) {
       next.proposal = {
         id: "ballot-" + contest.id,
         shopId: target.id,
-        options: proposalOptions(player, team, target.type),
+        options: proposalOptions(player, team, target),
         eligible: [player.id, ...team.members.map((m) => m.id)],
         votes: {},
         winner: null,
@@ -536,7 +555,7 @@ export function reduce(state, action) {
         next,
         "opening",
         TYPES[renovation.toType].shopName +
-          " opened in MCP Central, in the former home of " +
+          " opened in " + REGIONS[target.location].name + ", in the former home of " +
           TYPES[renovation.fromType].shopName +
           ".",
         target.id,

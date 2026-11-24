@@ -1,81 +1,7 @@
 import { ALLIANCES, TYPES } from "./game.js";
 import { icon } from "./icons.js";
-import { shopStreet, STREETS } from "./streets.js";
-
-// Positions are percentages of the *illustration*, so labels follow the buildings at every zoom.
-const LANDMARKS = [
-  { id: "estate", name: "Po Lam Estate", local: "寶林邨", x: 22, y: 10 },
-  { id: "park", name: "Po Tsui Park", local: "寶翠公園", x: 15, y: 38 },
-  {
-    id: "central",
-    name: "MCP Central",
-    local: "新都城中心二期",
-    x: 70,
-    y: 53,
-  },
-  { id: "station", name: "Po Lam Station", local: "寶琳站", x: 66, y: 69 },
-  {
-    id: "discovery",
-    name: "MCP Discovery",
-    local: "新都城中心三期",
-    x: 53,
-    y: 72,
-  },
-  { id: "one", name: "MCP ONE", local: "新都城中心一期", x: 46, y: 84 },
-];
-// Walkway centre lines are measured on the reference's 1000 x 750 map canvas.
-const INTERCHANGE = [656, 583];
-const NORTH_WALK = [
-  INTERCHANGE,
-  [622, 535],
-  [582, 481],
-  [549, 433],
-  [515, 388],
-  [491, 370],
-];
-const EAST_WALK = [INTERCHANGE, [682, 561]];
-const SOUTH_WALK = [INTERCHANGE, [626, 601]];
-const WALKWAYS = {
-  central: [...EAST_WALK, [704, 547], [735, 526], [745, 509]],
-  station: [...EAST_WALK, [674, 543]],
-  discovery: [...SOUTH_WALK, [610, 599], [589, 593], [574, 592]],
-  one: [...SOUTH_WALK, [585, 623], [543, 648], [497, 669], [480, 651]],
-  park: [
-    ...NORTH_WALK,
-    [453, 398],
-    [400, 438],
-    [355, 479],
-    [318, 501],
-    [276, 478],
-    [223, 452],
-    [164, 427],
-    [114, 400],
-    [77, 369],
-  ],
-  estate: [
-    ...NORTH_WALK,
-    [542, 336],
-    [592, 302],
-    [638, 255],
-    [686, 208],
-    [653, 165],
-    [615, 129],
-    [559, 100],
-    [501, 83],
-    [437, 71],
-    [326, 78],
-    [260, 88],
-    [211, 94],
-  ],
-};
-const BAYS = {
-  unit01: [50, 59.3],
-  unit02: [20.4, 33.4],
-  unit03: [79.6, 33.4],
-  unit04: [20.4, 59.3],
-  unit05: [50, 33.4],
-  unit06: [79.6, 59.3],
-};
+import { REGIONS, regionOfShop } from "./regions.js";
+import { REGION_LAYOUT } from "./region-layout.js";
 const FACTIONS = {
   trend: { short: "Trendsetters", symbol: "bolt" },
   comfort: { short: "Comfort Club", symbol: "flower" },
@@ -93,7 +19,7 @@ const FINISHES = {
   renovating: ["#69706a", "#d7be83"],
 };
 const mapViews = new WeakMap();
-let memory = { session: null, map: null, location: "central" };
+let memory = { session: null, cameras: {} };
 
 function el(tag, cls, value) {
   const item = document.createElement(tag);
@@ -168,115 +94,57 @@ function addPerson(board, type, x, y, label, motion = "") {
   return person;
 }
 
-function walkTo(person, location) {
-  const from = WALKWAYS[memory.location];
-  const to = WALKWAYS[location];
-  const [x, y] = to.at(-1);
-  const interrupted = person
-    .getAnimations()
-    .filter((a) => a.playState === "running");
-  interrupted.forEach((a) => a.cancel());
-  at(person, x / 10, y / 7.5);
-  memory.location = location;
-  if (
-    from === to ||
-    interrupted.length ||
-    matchMedia("(prefers-reduced-motion: reduce)").matches
-  )
-    return;
-  let shared = 0;
-  while (from[shared + 1] && from[shared + 1] === to[shared + 1]) shared++;
-  const route = [...from.slice(shared).reverse(), ...to.slice(shared + 1)];
-  let distance = 0;
-  const frames = route.map(([cx, cy], i) => {
-    if (i) distance += Math.hypot(cx - route[i - 1][0], cy - route[i - 1][1]);
-    return { left: cx / 10 + "%", top: cy / 7.5 + "%", offset: distance };
-  });
-  frames.forEach((frame) => {
-    frame.offset /= distance;
-  });
-  person.animate(frames, {
-    duration: Math.min(4400, Math.max(600, distance * 4)),
-    easing: "ease-in-out",
-  });
-}
-
-function mapLayer(board, state, territories, onLocation, onShop, selectStreet) {
-  const focus = districtFocusShop(state);
-  const latest = lastCapture(state);
-  board.append(territoryOverlay(state, latest, territories, selectStreet));
-  const [startX, startY] = WALKWAYS[memory.location].at(-1);
+function mapLayer(board, state, territories, onLocation, focusId) {
+  const claim = lastCapture(state);
+  if (territories) board.append(territoryOverlay(state, claim, onLocation));
   addPerson(board, "kit", 78.1, 64.3, "", "w-local-person w-central-walk");
   addPerson(board, "jo", 24.4, 39.8, "", "w-local-person w-park-walk");
-  const avatar = addPerson(
-    board,
-    "player",
-    startX / 10,
-    startY / 7.5,
-    "YOU",
-    "w-your-person",
-  );
-  // The mall sign carries the tenant's actual artwork on the district map.
-  const signType = isShut(focus) ? "renovating" : focus.type;
-  const rooftop = hotspot(
-    "Visit " + TYPES[focus.type].shopName + " · " + phaseText(focus),
-    () =>
-      territories ? selectStreet(shopStreet(focus.id)) : onShop?.(focus.id),
-    "w-rooftop",
-  );
-  rooftop.title = isShut(focus) ? phaseText(focus) : TYPES[focus.type].shopName;
-  rooftop.dataset.tenant = signType;
-  rooftop.dataset.focusUnit = focus.id;
-  rooftop.style.setProperty("--sign-edge", FINISHES[signType][0]);
-  rooftop.append(sprite(signType));
-  board.append(at(rooftop, 77.8, 59));
-  for (const place of LANDMARKS) {
-    const main = place.id === "central";
-    const marker = hotspot(
-      place.name + " · " + place.local,
-      () => {
-        walkTo(avatar, place.id);
-        if (territories && (place.id === "park" || place.id === "station"))
-          selectStreet(place.id);
-        else onLocation?.(place.id);
-      },
-      "w-place" + (main ? " w-place-main" : ""),
-    );
-    at(marker, place.x, place.y);
-    marker.dataset.location = place.id;
+  for (const [id, layout] of Object.entries(REGION_LAYOUT)) {
+    const area = REGIONS[id];
+    const marker = hotspot(area.name, () => onLocation?.(id), "w-place");
+    marker.dataset.location = id;
+    marker.title = area.name;
+    at(marker, ...layout.pin);
     const sign = el("span", "w-place-sign");
     const medallion = el("span", "w-place-icon");
-    medallion.append(sprite(place.id));
+    medallion.append(sprite(id));
     const text = el("span", "w-place-copy");
-    text.append(el("strong", "", place.name), el("small", "", place.local));
-    sign.append(medallion, text);
-    if (main) {
-      marker.style.setProperty("--w-focus-owner", ownerColor(focus.owner));
-      if (territories) marker.classList.add("w-marked-mall");
-      const arrow = el("i", "w-enter-arrow");
-      arrow.innerHTML = icon("arrow", 14);
-      sign.append(arrow);
-    }
-    marker.append(sign);
-    if (main && focus.phase !== "open") {
-      const strip = el("span", "w-signal w-live");
-      strip.append(
-        el("i", "w-light"),
-        document.createTextNode(
-          focus.phase === "reopened"
-            ? TYPES[focus.type].shopName + " opens"
-            : phaseText(focus),
-        ),
+    text.append(el("strong", "", area.name));
+    if (territories && state.player.alliance) {
+      const count = controlled(state, area);
+      const tally = el(
+        "small",
+        "w-place-tally",
+        count + " / " + area.units.length,
       );
-      marker.append(strip);
+      tally.title = "Shops your alliance controls";
+      tally.dataset.locationCount = count;
+      const flags = el("span", "w-place-holdings");
+      flags.ariaHidden = "true";
+      for (const unit of area.units) {
+        const flag = el("i", "w-tiny-flag");
+        flag.style.setProperty(
+          "--w-owner",
+          ownerColor(state.shops[unit].owner),
+        );
+        flags.append(flag);
+      }
+      flags.append(tally);
+      text.append(flags);
     }
-    marker.append(el("span", "w-marker-foot"));
+    sign.append(medallion, text);
+    marker.append(sign, el("span", "w-marker-foot"));
+    if (claim && regionOfShop(claim.shopId) === id) {
+      marker.dataset.lastClaim = claim.shopId;
+      marker.append(el("span", "w-claim-tag", "★ " + claim.shopId.slice(-2)));
+      marker.title += " · Latest capture · Unit " + claim.shopId.slice(-2);
+    }
+    if (focusId && regionOfShop(focusId) === id)
+      marker.classList.add("w-return-region");
     board.append(marker);
   }
 }
 
-// Influence is a schematic catchment for each shop, registered to the original
-// 1000 × 750 district canvas. Shared polylines trace arterial roads and local streets.
 const INFLUENCE_INK = {
   trend: "#14acac",
   comfort: "#f16f57",
@@ -305,264 +173,134 @@ function factionBadge(owner) {
   return badge;
 }
 
-function ownedOnStreet(state, street) {
-  return street.units.filter(
-    ({ id }) => state.shops[id].owner === state.player.alliance,
+function controlled(state, area) {
+  return area.units.filter(
+    (id) => state.shops[id].owner === state.player.alliance,
   ).length;
 }
 
-function segmentMarker(street, state) {
-  const [x, y] = street.marker;
-  const marker = svgNode("g", {
-    class: "w-segment-marker",
-    transform: `translate(${x} ${y})`,
-  });
-  const sign = svgNode("g", { class: "w-segment-sign" });
-  sign.append(
-    svgNode("rect", { x: -79, y: -19, width: 158, height: 38, rx: 8 }),
-  );
-  const image = svgNode("image", {
-    href: "assets/world/" + street.icon + ".png",
-    x: -73,
-    y: -12,
-    width: 24,
-    height: 24,
-  });
-  const count = ownedOnStreet(state, street);
-  sign.append(
-    image,
-    svgNode("text", { x: -44, y: -2, class: "w-segment-name" }, street.name),
-    svgNode("text", { x: -44, y: 12, class: "w-segment-sub" }, "3 storefronts"),
-  );
-  const tally = state.player.alliance ? count + "/3" : "›";
-  sign.append(
-    svgNode(
-      "text",
-      { x: 69, y: 5, class: "w-segment-tally", "text-anchor": "end" },
-      tally,
-    ),
-  );
-  marker.append(sign);
-  return marker;
-}
-
-function drawBorder(overlay, points, kind, units) {
-  if (kind !== "internal")
-    overlay.append(svgNode("polyline", { class: "w-line-casing", points }));
-  overlay.append(
-    svgNode("polyline", {
-      class: "w-domain-line",
-      points,
-      "data-edge": kind,
-      "data-border-units": units.sort().join(" "),
-    }),
-  );
-}
-
-function territoryOverlay(state, lastClaim, territories, selectStreet) {
+function territoryOverlay(state, latest, onLocation) {
   const svg = svgNode("svg", {
-    viewBox: "0 0 1000 750",
-    class: "w-commerce-map" + (territories ? " w-territories" : ""),
+    viewBox: "0 0 720 540",
+    class: "w-commerce-map w-territories",
     role: "group",
-    "aria-label": "Shopping streets in Po Lam",
+    "aria-label": "Illustrative shop influence areas in Po Lam",
   });
-  const zones = svgNode("g"),
-    borders = svgNode("g");
-  for (const [key, street] of Object.entries(STREETS)) {
-    const group = svgNode("g", {
-      class: "w-segment-zone",
-      "data-map-segment": key,
-      role: "button",
-      tabindex: "0",
-      "aria-label": "Explore " + street.name,
+  for (const [areaId, { grid, lots }] of Object.entries(REGION_LAYOUT)) {
+    const area = svgNode("g", {
+      class: "w-parcels",
+      "data-map-region": areaId,
     });
-    for (const [i, { id, door }] of street.units.entries()) {
-      const next = (i + 1) % 3,
-        prev = (i + 2) % 3,
-        shop = state.shops[id],
-        other = state.shops[street.units[prev].id];
-      const perimeter = [
-        street.outer[i],
-        street.arms[next],
-        street.arms[i].split(" ").reverse().join(" "),
-      ].join(" ");
-      const tile = svgNode("g", {
-        class: "w-domain",
-        "data-territory-unit": id,
-        "data-owner": shop.owner,
-        "data-phase": shop.phase,
-      });
-      tile.append(
-        svgNode(
-          "title",
-          {},
-          street.name +
-            " · " +
-            TYPES[shop.type].shopName +
-            " · " +
-            ownerName(shop.owner) +
-            (lastClaim?.shopId === id ? " · Latest capture" : ""),
-        ),
-        svgNode("polygon", {
+    const edges = new Map();
+    lots.forEach((row, r) =>
+      row.forEach((id, c) => {
+        const shop = state.shops[id];
+        const points = [
+          grid[r][c],
+          grid[r][c + 1],
+          grid[r + 1][c + 1],
+          grid[r + 1][c],
+        ];
+        const tile = svgNode("polygon", {
           class: "w-domain-fill",
-          points: perimeter,
+          points: points.join(" "),
           fill: INFLUENCE_INK[shop.owner],
+          "data-territory-unit": id,
+          "data-owner": shop.owner,
+          "data-phase": shop.phase,
+        });
+        tile.append(
+          svgNode(
+            "title",
+            {},
+            [
+              "Unit " + id.slice(-2),
+              TYPES[shop.type].shopName,
+              ownerName(shop.owner),
+            ].join(" · "),
+          ),
+        );
+        if (latest?.shopId === id) tile.setAttribute("data-latest-capture", "");
+        area.append(tile);
+        points.forEach((point, i) => {
+          const pair = [String(point), String(points[(i + 1) % points.length])]
+            .sort()
+            .join(" ");
+          if (!edges.has(pair)) edges.set(pair, []);
+          edges.get(pair).push(id);
+        });
+      }),
+    );
+    for (const [points, units] of edges) {
+      const [first, second] = units;
+      const kind = !second
+        ? "perimeter"
+        : state.shops[first].owner === state.shops[second].owner
+          ? "internal"
+          : "border";
+      area.append(
+        svgNode("polyline", {
+          points,
+          class: "w-domain-line",
+          "data-edge": kind,
+          "data-border-units": units.sort().join(" "),
         }),
       );
-      const pin = svgNode("g", {
-        class: "w-overview-unit",
-        transform: `translate(${door[0]} ${door[1]})`,
-      });
-      pin.append(
-        svgNode("circle", { r: 11, fill: ownerColor(shop.owner) }),
-        svgNode("text", { y: 3.5 }, id.slice(-2)),
-      );
-      tile.append(pin);
-      if (lastClaim?.shopId === id) {
-        tile.setAttribute("data-latest-capture", "");
-        pin.prepend(svgNode("circle", { class: "w-claim-ring", r: 15 }));
-      }
-      group.append(tile);
-      drawBorder(borders, street.outer[i], "perimeter", [id]);
-      drawBorder(
-        borders,
-        street.arms[i],
-        other.owner === shop.owner ? "internal" : "border",
-        [id, other.id],
-      );
     }
-    const activate = () => selectStreet(key);
-    group.addEventListener("click", activate);
-    group.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        activate();
-      }
-    });
-    group.append(segmentMarker(street, state));
-    zones.append(group);
+    area.addEventListener("click", () => onLocation?.(areaId));
+    svg.append(area);
   }
-  // Paint the road borders below the clickable signs and unit badges.
-  svg.append(borders, zones);
   return svg;
 }
 
-function streetFront(state, shop, point, onShop) {
-  const type = isShut(shop) ? "renovating" : shop.type;
-  const name = TYPES[shop.type].shopName,
-    phase = phaseText(shop);
-  const door = hotspot(
-    ["Unit " + shop.id.slice(-2), name, ownerName(shop.owner), phase].join(
-      " · ",
-    ),
-    () => onShop?.(shop.id),
-    "w-map-store",
+function regionHud(state, areaId) {
+  if (!state.player.alliance) return null;
+  const area = REGIONS[areaId];
+  const hud = el("aside", "w-region-hud");
+  hud.setAttribute("aria-label", "Shops your alliance controls");
+  const held = controlled(state, area);
+  const tally = el("strong", "", held + " / " + area.units.length);
+  tally.dataset.regionCount = held;
+  hud.append(
+    factionBadge(state.player.alliance),
+    el("span", "", "Ours"),
+    tally,
   );
-  Object.assign(door.dataset, {
-    mapStore: shop.id,
-    owner: shop.owner,
-    type,
-    phase: shop.phase,
-  });
-  door.style.setProperty("--w-owner", ownerColor(shop.owner));
-  at(door, point[0] / 10, point[1] / 7.5);
-  const top = el("span", "w-street-unit", "Unit " + shop.id.slice(-2));
-  const shopfront = el("span", "w-map-front");
-  const art = el("img", "w-map-frontart");
-  art.src = "assets/world/front-" + type + ".webp";
-  art.width = 230;
-  art.height = 116;
-  art.alt = "";
-  art.draggable = false;
-  shopfront.append(art, el("strong", "w-front-name", name));
-  const info = el("span", "w-store-owner");
-  info.append(
-    factionBadge(shop.owner),
-    el("b", "", FACTIONS[shop.owner].short),
+  const latest = state.events.findLast(
+    (event) =>
+      event.kind === "capture" && regionOfShop(event.shopId) === areaId,
   );
-  door.append(top, shopfront, info);
-  const status = el("span", "w-store-phase");
-  if (shop.phase !== "open")
-    status.append(el("i"), document.createTextNode(phase));
-  if (shop.phase === "renovating" && state.renovation?.shopId === shop.id)
-    status.append(
+  if (latest) {
+    const prior =
+      latest.previousOwner ??
+      (state.contest?.shopId === latest.shopId
+        ? state.contest.previousOwner
+        : null);
+    const owner = latest.owner ?? state.shops[latest.shopId].owner;
+    const change = el("span", "w-recent-gain");
+    change.dataset.regionChange = latest.shopId;
+    change.append(
+      el("b", "", "Unit " + latest.shopId.slice(-2)),
       document.createTextNode(" · "),
-      el("span", "", TYPES[state.renovation.toType].shopName),
     );
-  if (status.childNodes.length) door.append(status);
-  return door;
-}
-
-function streetHud(state, key, selectStreet) {
-  const street = STREETS[key],
-    hud = el("section", "w-segment-hud");
-  hud.setAttribute("aria-label", street.name);
-  const nav = el("div", "w-segment-nav");
-  const back = hotspot(
-    "Back to district",
-    () => selectStreet(null),
-    "w-street-back",
-  );
-  back.dataset.segmentBack = "";
-  back.innerHTML = icon("back", 15);
-  back.append(el("span", "", "District"));
-  const other = key === "park" ? "station" : "park";
-  const swap = hotspot(
-    "Explore " + STREETS[other].name,
-    () => selectStreet(other),
-    "w-street-switch",
-  );
-  swap.dataset.switchSegment = other;
-  swap.append(el("span", "", STREETS[other].name));
-  swap.insertAdjacentHTML("beforeend", icon("arrow", 15));
-  nav.append(back, swap);
-  const headline = el("div", "w-street-headline");
-  headline.append(sprite(street.icon), el("strong", "", street.name));
-  const owners = new Set(street.units.map(({ id }) => state.shops[id].owner));
-  headline.append(
-    el(
-      "small",
-      "w-street-mix",
-      owners.size > 1 ? "Mixed control" : "Unified control",
-    ),
-  );
-  if (state.player.alliance) {
-    const total = ownedOnStreet(state, street);
-    const count = el("b", "w-street-count", total + " / 3");
-    count.dataset.segmentCount = total;
-    const holdings = el("span", "w-street-holdings");
-    holdings.title = "Shops your alliance controls";
-    holdings.append(el("small", "", "Ours"), count);
-    headline.append(holdings);
-    const event = state.events.findLast(
-      (e) => e.kind === "capture" && shopStreet(e.shopId) === key,
-    );
-    if (event && state.shops[event.shopId].owner === state.player.alliance) {
-      const prior =
-        event.previousOwner ||
-        (state.contest?.status === "won" &&
-        state.contest.shopId === event.shopId
-          ? state.contest.previousOwner
-          : null);
-      const change = el("div", "w-street-change");
-      change.dataset.segmentChange = event.shopId;
-      change.append(el("b", "", "Unit " + event.shopId.slice(-2)));
-      if (prior && FACTIONS[prior])
-        change.append(
-          el(
-            "span",
-            "",
-            FACTIONS[prior].short +
-              " → " +
-              FACTIONS[state.player.alliance].short,
-          ),
-        );
-      change.append(el("strong", "", total - 1 + "/3 → " + total + "/3"));
-      hud.append(nav, headline, change);
-      return hud;
+    if (prior && FACTIONS[prior])
+      change.append(
+        el("span", "", FACTIONS[prior].short),
+        document.createTextNode(" → "),
+      );
+    change.append(el("span", "", FACTIONS[owner].short));
+    if (prior && prior !== owner && owner === state.player.alliance) {
+      const size = area.units.length;
+      change.append(
+        el(
+          "b",
+          "w-gain-count",
+          held - 1 + "/" + size + " → " + held + "/" + size,
+        ),
+      );
     }
+    hud.append(change);
   }
-  hud.append(nav, headline);
   return hud;
 }
 
@@ -575,7 +313,7 @@ function territoryKey(state) {
   if (player) summary.append(factionBadge(player));
   const title = el("span", "w-influence-title");
   title.append(
-    el("b", "", player ? FACTIONS[player].short : "MCP Central"),
+    el("b", "", player ? FACTIONS[player].short : "Digital Po Lam"),
     el("small", "", "Shop influence areas"),
   );
   summary.append(title);
@@ -606,7 +344,7 @@ function territoryKey(state) {
     el(
       "p",
       "",
-      "Select a street, then choose a storefront. Colors show each shop’s influence.",
+      "Select a landmark to explore its shops. Colors show each shop’s influence.",
     ),
   );
   key.append(details);
@@ -624,8 +362,67 @@ function bunting(color) {
   return string;
 }
 
-function mallLayer(board, state, territories, onShop) {
-  for (const [id, [x, y]] of Object.entries(BAYS)) {
+function localDoor(shop, point, onShop) {
+  const name = TYPES[shop.type].shopName;
+  const status = phaseText(shop);
+  const door = hotspot(
+    ["Unit " + shop.id.slice(-2), name, ownerName(shop.owner), status].join(
+      " · ",
+    ),
+    () => onShop?.(shop.id),
+    "w-local-door",
+  );
+  door.style.setProperty("--w-door-x", point[0] + "%");
+  door.style.setProperty("--w-door-y", point[1] + "%");
+  Object.assign(door.dataset, {
+    shop: shop.id,
+    type: shop.type,
+    owner: shop.owner,
+    phase: shop.phase,
+  });
+  door.style.setProperty("--w-owner", ownerColor(shop.owner));
+  const art = el("img", "w-local-front");
+  art.src =
+    "assets/world/front-" +
+    (isShut(shop) ? "regional-shutter" : shop.type) +
+    ".webp";
+  art.alt = "";
+  art.width = 250;
+  art.height = 140;
+  art.draggable = false;
+  const sign = el("span", "w-local-sign");
+  sign.append(el("b", "", shop.id.slice(-2)), el("strong", "", name));
+  const flag = el("span", "w-local-flag");
+  flag.append(
+    factionBadge(shop.owner),
+    el("span", "", FACTIONS[shop.owner].short),
+  );
+  const caption = el("span", "w-local-caption");
+  caption.append(sign, flag);
+  if (shop.phase !== "open")
+    caption.append(el("span", "w-local-status", status));
+  door.append(art, caption);
+  if (shop.decorated) door.append(bunting(ownerColor(shop.owner)));
+  return door;
+}
+
+function mallLayer(board, state, areaId, territories, onShop, focusId) {
+  const ids = REGIONS[areaId].units;
+  const points = REGION_LAYOUT[areaId].doors;
+  if (areaId !== "central") {
+    ids.forEach((id, i) => {
+      const door = localDoor(state.shops[id], points[i], onShop);
+      const [x, y] = REGION_LAYOUT[areaId].portraitDoors[i];
+      door.style.setProperty("--w-portrait-x", x + "%");
+      door.style.setProperty("--w-portrait-y", y + "%");
+      if (i === 1) door.classList.add("w-rear-stall");
+      if (id === focusId) door.setAttribute("aria-current", "true");
+      board.append(door);
+    });
+    return;
+  }
+  for (const [i, id] of ids.entries()) {
+    const [x, y] = points[i];
     const shop = state.shops[id];
     const type = isShut(shop) ? "renovating" : shop.type;
     const name = TYPES[shop.type].shopName;
@@ -637,7 +434,9 @@ function mallLayer(board, state, territories, onShop) {
     at(button, x, y);
     button.dataset.shop = id;
     button.dataset.phase = shop.phase;
-    button.dataset.type = type;
+    button.dataset.type = shop.type;
+    button.dataset.owner = shop.owner;
+    if (id === focusId) button.setAttribute("aria-current", "true");
     button.style.backgroundImage =
       'url("assets/world/front-' + type + '.webp")';
     const [dark, light] = FINISHES[type];
@@ -706,19 +505,21 @@ function shopLayer(board, state, shop) {
   }
 }
 
-// Keep the map's 4:3 aspect ratio, with independent district and storefront framing.
-function configureCamera(host, board, img, interactive, scene) {
-  const model =
-    scene === "map" && memory.map ? { ...memory.map } : { k: 1, x: 0, y: 0 };
+// All hotspot positions are measured on the artwork. A scene keeps its own
+// camera so returning from an interior restores the same group of storefronts.
+function configureCamera(host, board, img, interactive, scene, areaId) {
+  const key = scene === "mall" ? areaId : scene;
+  const model = memory.cameras[key]
+    ? { ...memory.cameras[key] }
+    : { k: 1, x: 0, y: 0 };
   let w = 1,
     h = 1,
     vw = 1,
     vh = 1,
     minimumZoom = 1;
-  let focusedStreet = null;
   function draw() {
-    const limitX = Math.max(0, (w * model.k - vw) / 2, ((model.k - 1) * w) / 2);
-    const limitY = Math.max(0, (h * model.k - vh) / 2, ((model.k - 1) * h) / 2);
+    const limitX = Math.max(0, (w * model.k - vw) / 2);
+    const limitY = Math.max(0, (h * model.k - vh) / 2);
     model.x = Math.max(-limitX, Math.min(limitX, model.x));
     model.y = Math.max(-limitY, Math.min(limitY, model.y));
     board.style.transform =
@@ -729,31 +530,15 @@ function configureCamera(host, board, img, interactive, scene) {
       "px) scale(" +
       model.k +
       ")";
-    board.style.setProperty("--w-counter-zoom", Math.min(1, 1 / model.k));
-    board.style.setProperty("--w-store-counter", 1 / model.k);
-    if (scene === "map") {
-      const screenScale = (w * model.k) / 1000;
-      host.classList.toggle("w-map-overview", screenScale < 0.58);
-      board.style.setProperty("--w-mini-scale", 1 / screenScale);
-    }
-    if (scene === "map" && !focusedStreet) {
-      model.overviewWidth = vw;
-      memory.map = { ...model };
-    }
+    board.style.setProperty("--w-counter-zoom", 1 / model.k);
+    if (interactive)
+      memory.cameras[key] = { ...model, frameWidth: vw, frameHeight: vh };
   }
-  function frameDistrict() {
-    model.k = minimumZoom;
-    model.x = 0;
+  function reset() {
+    model.k = 1;
+    model.x = scene === "map" && vw < 600 ? w * 0.045 : 0;
     model.y = 0;
-    if (scene !== "map" || vw >= 590) return;
-    // Compact street signs are 98 screen pixels wide. Split the remaining
-    // space between their two centers, leaving a margin on both sides.
-    const west = STREETS.park.marker[0];
-    const east = STREETS.station.marker[0];
-    const separation = Math.min(vw * 0.61, vw - 98 - 20);
-    const districtWidth = (1000 * separation) / (east - west);
-    model.k = Math.max(minimumZoom, Math.min(1, districtWidth / w));
-    model.x = (0.5 - (west + east) / 2000) * w * model.k;
+    draw();
   }
   function fit() {
     vw = host.clientWidth || 1;
@@ -762,25 +547,35 @@ function configureCamera(host, board, img, interactive, scene) {
       img.naturalWidth && img.naturalHeight
         ? img.naturalWidth / img.naturalHeight
         : scene === "map"
-          ? 1448 / 1086
+          ? 4 / 3
           : scene === "mall"
-            ? 1152 / 672
+            ? 12 / 7
             : 16 / 9;
-    w =
-      scene === "map" && vw >= 590
-        ? Math.min(vw - 16, (vh - 14) * ratio)
-        : Math.max(vw, vh * ratio);
+    const compact = vw < 600;
+    const portrait =
+      scene === "mall" && areaId !== "central" && compact && vh > vw;
+    host.classList.toggle("w-compact", compact);
+    host.classList.toggle("w-portrait-region", portrait);
+    if (scene === "map") {
+      // Fit the full spread of landmark signs on a phone at the default zoom.
+      w = Math.min(compact ? vw * 1.16 : vw - 12, (vh - 14) * ratio);
+    } else if (scene === "mall") {
+      w = Math.min(compact ? vw * 1.08 : vw, vh * ratio);
+    } else {
+      w = Math.max(vw, vh * ratio);
+    }
     h = w / ratio;
-    minimumZoom =
-      scene === "map" && vw < 590
-        ? Math.min(1, Math.max(1, vw - 12) / w, Math.max(1, vh - 12) / h)
-        : 1;
-    model.k = Math.max(minimumZoom, model.k);
+    if (portrait) {
+      w = vw;
+      h = vh;
+    }
+    minimumZoom = Math.min(1, vw / w, vh / h);
     board.style.width = w + "px";
     board.style.height = h + "px";
-    if (focusedStreet) frameStreet();
-    else if (scene === "map" && model.overviewWidth !== vw) frameDistrict();
-    draw();
+    const lastView = memory.cameras[key];
+    if (!lastView || lastView.frameWidth !== vw || lastView.frameHeight !== vh)
+      reset();
+    else draw();
   }
   const abort = new AbortController();
   const options = { signal: abort.signal };
@@ -797,45 +592,6 @@ function configureCamera(host, board, img, interactive, scene) {
     draw();
     return model.k;
   };
-  function frameStreet() {
-    const points = STREETS[focusedStreet].units.map((unit) => unit.door);
-    const xs = points.map((point) => point[0]),
-      ys = points.map((point) => point[1]);
-    const left = Math.min(...xs),
-      right = Math.max(...xs),
-      top = Math.min(...ys),
-      bottom = Math.max(...ys);
-    const narrow = vw < 600;
-    const doorWidth = narrow
-      ? Math.max(89, Math.min(122, vw * 0.31))
-      : Math.max(135, Math.min(205, vw * 0.15));
-    const scale = Math.min(
-      2.35,
-      (vw - doorWidth - (narrow ? 18 : 65)) / (right - left),
-      (vh - doorWidth * 0.87 - (narrow ? 174 : 165)) / (bottom - top),
-    );
-    model.k = Math.max(minimumZoom, Math.min(2.4, (scale * 1000) / w));
-    model.x = (0.5 - (left + right) / 2000) * w * model.k;
-    model.y = (0.5 - (top + bottom) / 1500) * h * model.k + doorWidth * 0.18;
-    board.style.setProperty("--w-store-width", doorWidth + "px");
-  }
-  function selectStreet(key) {
-    if (key === focusedStreet) return;
-    focusedStreet = key;
-    if (key) frameStreet();
-    else if (vw < 590 || memory.map?.overviewWidth !== vw) frameDistrict();
-    else Object.assign(model, memory.map);
-    draw();
-  }
-  function reset() {
-    if (focusedStreet) {
-      frameStreet();
-      draw();
-      return;
-    }
-    frameDistrict();
-    draw();
-  }
   if (interactive) {
     const pointers = new Map();
     let distance = 0;
@@ -971,7 +727,6 @@ function configureCamera(host, board, img, interactive, scene) {
   return {
     zoom,
     reset,
-    selectStreet,
     dispose() {
       observer.disconnect();
       abort.abort();
@@ -1007,18 +762,22 @@ export function mountWorld(
     onLocation,
     onShop,
     mapShopId = null,
-    onMapShopFocus,
+    areaId = "central",
   },
 ) {
   mapViews.get(container)?.();
   if (memory.session !== state.sessionId)
-    memory = { session: state.sessionId, map: null, location: "central" };
+    memory = { session: state.sessionId, cameras: {} };
   const shop = state.shops[shopId] || state.shops.unit01;
+  if (!Object.hasOwn(REGIONS, areaId)) areaId = "central";
+  const area = REGIONS[areaId];
   const host = el("div", "w-scene w-" + scene);
+  if (scene === "mall") host.dataset.region = areaId;
+  if (scene === "shop") host.dataset.unit = shop.id;
   host.setAttribute("role", "region");
   const titles = {
     map: "Interactive map of Po Lam",
-    mall: "MCP Central shopping arcade",
+    mall: areaId === "central" ? "MCP Central shopping arcade" : area.name,
     shop: TYPES[shop.type].shopName + " interior",
   };
   host.setAttribute("aria-label", titles[scene]);
@@ -1026,84 +785,48 @@ export function mountWorld(
   if (movable) host.tabIndex = 0;
   const board = el("div", "w-board");
   const img = el("img", "w-art");
-  img.alt =
-    scene === "map"
-      ? "An illustrated aerial view of Po Lam’s malls, station, tower blocks and park."
-      : scene === "mall"
-        ? "A two-storey shopping arcade around the central atrium."
-        : isShut(shop)
-          ? "A closed shop being prepared for its next tenant."
-          : TYPES[shop.type].name + " with its stock and furnishings.";
   img.draggable = false;
-  img.src =
-    scene === "map"
-      ? "assets/map.webp"
-      : scene === "mall"
+  if (scene === "map") {
+    img.alt =
+      "An illustrated aerial view of Po Lam’s malls, station, tower blocks and park.";
+    img.src = "assets/map.webp";
+    board.append(img);
+    mapLayer(board, state, territories, onLocation, mapShopId);
+    if (territories) host.classList.add("w-influence-on");
+  } else if (scene === "mall") {
+    img.alt =
+      areaId === "central"
+        ? "A two-storey shopping arcade around the central atrium."
+        : area.name;
+    img.src =
+      areaId === "central"
         ? "assets/mall.webp"
-        : "assets/interiors/" +
-          (isShut(shop) ? "renovating" : shop.type) +
-          ".webp";
-  board.append(img);
-  let camera,
-    focusedKey = null;
-  function focusStreet(key, notify = true) {
-    if (key === focusedKey && host.dataset.focusedSegment !== undefined) return;
-    focusedKey = key;
-    host.dataset.focusedSegment = key || "";
-    board.querySelectorAll(".w-map-store").forEach((node) => node.remove());
-    host.querySelector(".w-segment-hud")?.remove();
-    for (const zone of board.querySelectorAll("[data-map-segment]")) {
-      zone.setAttribute(
-        "aria-pressed",
-        String(zone.dataset.mapSegment === key),
-      );
-      zone.setAttribute("tabindex", key === null ? "0" : "-1");
-    }
-    if (key) {
-      for (const { id, door } of STREETS[key].units) {
-        const store = streetFront(state, state.shops[id], door, onShop);
-        if (lastCapture(state)?.shopId === id)
-          store.setAttribute("data-recent-store", "");
-        if (id === (notify ? STREETS[key].home : mapShopId)) {
-          store.setAttribute("aria-current", "true");
-          store.dataset.focusedStore = id;
-        }
-        board.append(store);
-      }
-      host.append(streetHud(state, key, focusStreet));
-    }
-    camera?.selectStreet(key);
-    if (notify) {
-      onMapShopFocus?.(key ? STREETS[key].home : null);
-      if (key)
-        host
-          .querySelector("[data-segment-back]")
-          ?.focus({ preventScroll: true });
-      else
-        board
-          .querySelector(
-            '[data-map-segment="' + (lastStreet || "station") + '"]',
-          )
-          ?.focus({ preventScroll: true });
-    }
-    if (key) lastStreet = key;
+        : "assets/regions/" + areaId + ".webp";
+    host.style.setProperty(
+      "--w-portrait-crop",
+      REGION_LAYOUT[areaId].portraitCrop || "50%",
+    );
+    host.style.setProperty("--w-scene-art", "url('" + img.src + "')");
+    board.append(img);
+    mallLayer(board, state, areaId, territories, onShop, mapShopId);
+  } else {
+    img.alt = isShut(shop)
+      ? "A closed shop being prepared for its next tenant."
+      : TYPES[shop.type].name + " with its stock and furnishings.";
+    img.src =
+      "assets/interiors/" + (isShut(shop) ? "renovating" : shop.type) + ".webp";
+    board.append(img);
+    shopLayer(board, state, shop);
   }
-  let lastStreet = null;
-  if (scene === "map")
-    mapLayer(board, state, territories, onLocation, onShop, focusStreet);
-  else if (scene === "mall") mallLayer(board, state, territories, onShop);
-  else shopLayer(board, state, shop);
   host.append(board);
   container.replaceChildren(host);
-  if (scene === "map" && territories) {
-    host.classList.add("w-influence-on");
-    host.append(territoryKey(state));
+  if (scene === "map" && territories) host.append(territoryKey(state));
+  if (scene === "mall") {
+    const hud = regionHud(state, areaId);
+    if (hud) host.append(hud);
   }
-  camera = configureCamera(host, board, img, movable, scene);
-  if (scene === "map") {
-    addControls(host, camera);
-    focusStreet(shopStreet(mapShopId) || null, false);
-  }
+  const camera = configureCamera(host, board, img, movable, scene, areaId);
+  if (movable) addControls(host, camera);
   const clean = () => {
     camera.dispose();
     host.remove();

@@ -1,6 +1,7 @@
-import { ALLIANCES, TYPES, RULES } from "./game.js";
+import { ALLIANCES, RULES, initialShops } from "./game.js";
+import { CENTRAL_TYPES, REGIONS, regionOfShop } from "./regions.js";
 
-const shopIds = ["unit01", "unit02", "unit03", "unit04", "unit05", "unit06"];
+const shopIds = Object.values(REGIONS).flatMap((region) => region.units);
 const phases = [
   "open",
   "contested",
@@ -12,8 +13,6 @@ const phases = [
 const record = (value) =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const integer = (value, min = 0) => Number.isSafeInteger(value) && value >= min;
-const knownType = (value) =>
-  typeof value === "string" && Object.hasOwn(TYPES, value);
 const hasTeam = (id) => typeof id === "string" && Object.hasOwn(ALLIANCES, id);
 const knownOwner = (id) => id === "incumbent" || hasTeam(id);
 const list = (value, check) => Array.isArray(value) && value.every(check);
@@ -21,12 +20,12 @@ const unique = (values) => values.length === new Set(values).size;
 const validShop = (id) => shopIds.includes(id);
 const text = (value) => typeof value === "string" && value.length > 0;
 
-function validRefit(refit) {
+function validRefit(refit, shops) {
   return (
     record(refit) &&
-    validShop(refit.shopId) &&
-    knownType(refit.fromType) &&
-    knownType(refit.toType) &&
+    Object.hasOwn(shops, refit.shopId) &&
+    REGIONS[regionOfShop(refit.shopId)].types.includes(refit.fromType) &&
+    REGIONS[regionOfShop(refit.shopId)].types.includes(refit.toType) &&
     refit.fromType !== refit.toType &&
     integer(refit.startDay, 1) &&
     integer(refit.readyDay, refit.startDay + 1) &&
@@ -44,7 +43,7 @@ function validCampaign(world) {
   if (
     !record(contest) ||
     !text(contest.id) ||
-    !validShop(contest.shopId) ||
+    !Object.hasOwn(shops, contest.shopId) ||
     !hasTeam(contest.alliance) ||
     contest.alliance !== player.alliance ||
     !["open", "reopened"].includes(contest.previousPhase) ||
@@ -83,12 +82,13 @@ function validCampaign(world) {
     return false;
   if (proposal === null)
     return shop.phase === "captured" && renovation === null;
+  const tenantPool = REGIONS[regionOfShop(shop.id)].types;
   if (
     !record(proposal) ||
     !text(proposal.id) ||
     proposal.shopId !== shop.id ||
-    !list(proposal.options, knownType) ||
-    proposal.options.length !== RULES.proposalCount ||
+    !list(proposal.options, (type) => tenantPool.includes(type)) ||
+    proposal.options.length !== Math.min(RULES.proposalCount, tenantPool.length - 1) ||
     !unique(proposal.options) ||
     !list(proposal.eligible, (id) => members.includes(id)) ||
     proposal.eligible.length !== members.length ||
@@ -104,7 +104,7 @@ function validCampaign(world) {
   return (
     proposal.options.includes(proposal.winner) &&
     Object.keys(proposal.votes).length === members.length &&
-    validRefit(renovation) &&
+    validRefit(renovation, shops) &&
     renovation.shopId === shop.id &&
     renovation.toType === proposal.winner &&
     (renovation.complete
@@ -116,30 +116,33 @@ function validCampaign(world) {
 function validWorld(world) {
   if (
     !record(world) ||
-    world.version !== 1 ||
+    ![1, 2].includes(world.version) ||
     !text(world.sessionId) ||
     !integer(world.day, 1)
   )
     return false;
   const { player, shops, visits } = world;
+  const expectedIds = world.version === 1 ? REGIONS.central.units : shopIds;
   if (
     !record(player) ||
     player.id !== "player" ||
     !(player.alliance === null || hasTeam(player.alliance)) ||
-    !list(player.preferences, knownType) ||
+    !list(player.preferences, (type) => CENTRAL_TYPES.includes(type)) ||
     !record(shops) ||
     !record(visits) ||
-    Object.keys(shops).length !== shopIds.length ||
-    Object.keys(visits).length !== shopIds.length
+    Object.keys(shops).length !== expectedIds.length ||
+    Object.keys(visits).length !== expectedIds.length
   )
     return false;
   if (
-    !shopIds.every((id) => {
+    !expectedIds.every((id) => {
       const s = shops[id];
+      const region = regionOfShop(id);
       return (
         record(s) &&
         s.id === id &&
-        knownType(s.type) &&
+        REGIONS[region].types.includes(s.type) &&
+        (s.location === region || (world.version === 1 && s.location === undefined)) &&
         phases.includes(s.phase) &&
         knownOwner(s.owner) &&
         integer(s.defense) &&
@@ -159,15 +162,15 @@ function validWorld(world) {
         text(e.text) &&
         integer(e.day, 1) &&
         (e.kind !== "capture" ||
-          (validShop(e.shopId) &&
+          (Object.hasOwn(shops, e.shopId) &&
             (e.previousOwner === undefined || knownOwner(e.previousOwner)) &&
             (e.owner === undefined || hasTeam(e.owner)))),
     ) &&
     list(
       world.results,
-      (r) => record(r) && text(r.roundId) && validShop(r.shopId),
+      (r) => record(r) && text(r.roundId) && Object.hasOwn(shops, r.shopId),
     ) &&
-    list(world.history, (h) => validRefit(h) && h.complete) &&
+    list(world.history, (h) => validRefit(h, shops) && h.complete) &&
     validCampaign(world)
   );
 }
@@ -175,6 +178,7 @@ function validWorld(world) {
 export function initialView() {
   return {
     scene: "map",
+    region: "central",
     shopId: "unit01",
     mapShopId: null,
     loc: null,
@@ -189,11 +193,26 @@ export function readSave(raw, areas) {
   try {
     const data = JSON.parse(raw);
     if (!validWorld(data?.state)) return { status: "unreadable" };
+    // A v1 file is complete only with exactly the six original units. Expand
+    // it after validation, preserving its ballots, visits and active campaign.
+    if (data.state.version === 1) {
+      for (const shop of Object.values(initialShops())) {
+        if (Object.hasOwn(data.state.shops, shop.id)) {
+          data.state.shops[shop.id].location = shop.location;
+        } else {
+          data.state.shops[shop.id] = shop;
+          data.state.visits[shop.id] = 0;
+        }
+      }
+      data.state.version = 2;
+    }
     const source = record(data.view) ? data.view : {};
     const view = initialView();
     if (["map", "mall", "shop"].includes(source.scene))
       view.scene = source.scene;
     if (validShop(source.shopId)) view.shopId = source.shopId;
+    if (typeof source.region === "string" && Object.hasOwn(REGIONS, source.region))
+      view.region = source.region;
     if (
       view.scene === "map" &&
       typeof source.loc === "string" &&
@@ -205,6 +224,13 @@ export function readSave(raw, areas) {
     if (view.scene === "shop") {
       // The actual unit is enough to recover the return route from an older v1 save.
       view.mapShopId = view.shopId;
+      view.region = regionOfShop(view.shopId);
+    } else if (
+      view.scene === "mall" &&
+      validShop(source.mapShopId) &&
+      source.region === regionOfShop(source.mapShopId)
+    ) {
+      view.mapShopId = source.mapShopId;
     } else if (view.scene === "map" && !view.loc) {
       if (validShop(source.mapShopId)) {
         view.mapShopId = source.mapShopId;

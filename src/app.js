@@ -9,6 +9,7 @@ import {
   ALLIANCES,
   RULES,
 } from "./game.js";
+import { REGIONS, CENTRAL_TYPES, regionOfShop } from "./regions.js";
 import { initialView, readSave } from "./save.js";
 import { districtFocusShop, mountWorld } from "./world.js";
 import { icon } from "./icons.js";
@@ -17,38 +18,6 @@ import { daily, insights, allianceProfile, director } from "./community.js";
 
 const key = "polamlife.fieldguide.v1";
 const root = document.querySelector("#game");
-const areas = {
-  central: [
-    "MCP Central",
-    "新都城中心二期",
-    "Step through the glass atrium to explore six alliance-run shops.",
-  ],
-  station: [
-    "Po Lam Station",
-    "寶琳站",
-    "The terminus of the Tseung Kwan O line. A covered walkway leads to MCP Central.",
-  ],
-  estate: [
-    "Po Lam Estate",
-    "寶林邨",
-    "Residential towers rise around the footpaths of this hillside estate.",
-  ],
-  park: [
-    "Po Tsui Park",
-    "寶翠公園",
-    "Beyond the football pitches, a tree-lined path leads back to the mall.",
-  ],
-  discovery: [
-    "MCP Discovery",
-    "新都城中心三期",
-    "Across the road from Central, footbridges tie the neighborhood together.",
-  ],
-  one: [
-    "MCP ONE",
-    "新都城中心一期",
-    "The southern mall anchors this end of the district.",
-  ],
-};
 const teamIcons = { trend: "bolt", comfort: "flower", collective: "leaf" };
 const phaseNames = {
   open: "Open for business",
@@ -62,7 +31,7 @@ let lastSnapshot = null;
 const load = () => {
   try {
     lastSnapshot = localStorage.getItem(key);
-    return readSave(lastSnapshot, areas);
+    return readSave(lastSnapshot, REGIONS);
   } catch {
     return { status: "unavailable" };
   }
@@ -157,12 +126,13 @@ function toast(msg) {
   clearTimeout(noticeTimer);
   noticeTimer = setTimeout(() => el.classList.remove("show"), 3200);
 }
-function go(scene, id) {
-  if ((scene === "shop" || id != null) && !Object.hasOwn(state.shops, id))
-    return;
+function go(scene, id, region = view.region) {
+  if ((scene === "shop" || id != null) && !Object.hasOwn(state.shops, id)) return;
+  if (!Object.hasOwn(REGIONS, region)) region = "central";
   modal = "";
   view.scene = scene;
   view.loc = null;
+  view.region = id ? regionOfShop(id) : region;
   view.mapShopId = id ?? null;
   if (scene !== "map") view.started = true;
   if (scene === "shop") {
@@ -211,8 +181,8 @@ function sceneCard() {
       view.scene === "mall")
   )
     return card(
-      "MCP CENTRAL · SIX ALLIANCE SHOPS",
-      "The mall is yours",
+      "PO LAM · ALLIANCE SHOPS",
+      "Your alliance holds Po Lam",
       "Your crew runs every counter. Read the district paper, visit a shop or start a fresh neighborhood.",
       btn("daily", "Read the Daily", "primary", "paper") +
         btn("confirmReset", "New game", "link", "reset"),
@@ -227,21 +197,6 @@ function sceneCard() {
       "welcome",
     );
   if (view.scene === "map") {
-    if (view.loc) {
-      const a = areas[view.loc];
-      return card(
-        "DISTRICT LANDMARK · " + a[1],
-        a[0],
-        a[2],
-        btn(
-          "mall",
-          view.loc === "central" ? "Enter the mall" : "Visit MCP Central",
-        ),
-        view.loc === "central" && t.phase === "reopened"
-          ? `<div class="small-chip">${icon("star", 14)} Just opened · ${noun(state.shops[state.history.at(-1).shopId].type)}</div>`
-          : "",
-      );
-    }
     if (!view.started) return "";
     if (focusedShop) {
       const nextAction = {
@@ -280,7 +235,7 @@ function sceneCard() {
           ".",
       };
       return card(
-        "MCP CENTRAL · " + unit(t).toUpperCase(),
+        REGIONS[t.location].name + " · " + unit(t).toUpperCase(),
         phaseNames[t.phase],
         copy[t.phase],
         btn("focusShop", "Return to " + unit(t), "primary", "shop"),
@@ -293,7 +248,7 @@ function sceneCard() {
       state.history.length
         ? "A new day in Po Lam"
         : joined
-          ? "Choose a shopping street"
+          ? "Explore the neighborhood"
           : "A stop before class",
       state.history.length
         ? noun(state.history.at(-1).toType) +
@@ -301,7 +256,7 @@ function sceneCard() {
             noun(state.history.at(-1).fromType) +
             "."
         : joined
-          ? "Tap a street sign to see its three shops. Glaze Lane is on Station Walk."
+          ? "Choose a place on the map and walk up to a shop. Glaze Lane is at MCP Central."
           : "A donut counter sits along the station walkway. Take a look inside.",
       btn("mall", "Explore MCP Central", joined ? "secondary" : "primary"),
       joined
@@ -310,22 +265,21 @@ function sceneCard() {
       "compact",
     );
   }
-  if (view.scene === "mall")
-    return card(
-      "MCP CENTRAL · SIX STOREFRONTS",
-      "Central Atrium",
-      "Select a shop on either level.",
-      btn("focusShop", "Visit " + noun(t.type)),
-      "",
-      "compact mall-card",
-    );
+  if (view.scene === "mall") {
+    const focus = state.shops[view.mapShopId];
+    if (focus && focus.location === view.region && ["captured", "voting", "renovating"].includes(focus.phase))
+      return btn("focusShop", "Return to " + unit(focus), "secondary", "shop");
+    return "";
+  }
   if (!joined)
     return card(
       "YOUR FIRST STOP · " + unit(s).toUpperCase(),
       noun(s.type),
-      "A donut on the way to class? Maybe you’d rather have milk tea. Pick the stops you wish were here.",
+      s.id === "unit01" && s.type === "donut"
+        ? "A donut on the way to class? Maybe you’d rather have milk tea. Pick the stops you wish were here."
+        : "Choose your favorite shops to find an alliance and take part here.",
       btn("prefs", "Choose your favorites") +
-        btn("returnToStreet", "Back to shopping street", "link", "map"),
+        btn("returnToStreet", REGIONS[s.location].name, "link", "map"),
     );
   let desc = "",
     actions = "",
@@ -372,7 +326,7 @@ function sceneCard() {
     actions +
       (s.phase === "captured"
         ? ""
-        : btn("returnToStreet", "Back to shopping street", "link", "map")),
+        : btn("returnToStreet", REGIONS[s.location].name, "link", "map")),
     `<span class="team-tag">${icon(teamIcons[s.owner] || "flag", 14)} ${owner(s)}</span>`,
     s.phase === "reopened" ? "opening-card" : "compact",
   );
@@ -386,17 +340,18 @@ function render() {
   roundCleanup?.();
   roundCleanup = null;
   const map = view.scene === "map",
-    mall = view.scene === "mall";
+    mall = view.scene === "mall",
+    area = REGIONS[view.region || "central"];
   const location = map
     ? "Po Lam District"
     : mall
-      ? "MCP Central"
+      ? area.name
       : noun(shop().type);
   root.innerHTML = `<header class="mast"><div class="brand"><img class="series-mark" src="assets/agentopia-logo.png" alt="Agentopia" width="616" height="262"><span class="game-title" translate="no">PolamLife</span></div><div class="mast-right"><span class="online"><i></i> LOCAL WORLD</span><i class="mast-rule"></i><span class="day">${icon("sun", 19)} Day ${String(state.day).padStart(2, "0")}</span>${languageButton()}<button class="top-icon" data-do="sound" title="Turn sound ${view.sound ? "off" : "on"}" aria-label="Turn sound ${view.sound ? "off" : "on"}">${icon(view.sound ? "sound" : "mute", 19)}</button><button class="top-icon" data-do="settings" aria-label="Settings" title="Settings">${icon("settings", 19)}</button></div></header>
  <div class="game-body"><nav class="rail" aria-label="Field guide">${nav("map", "World", "map", true)}${nav("alliance", "Alliance", "flag")}${nav("daily", "Daily", "paper")}${nav("insights", "Insights", "chart")}<div class="rail-bottom">${nav("help", "Guide", "book")}<span class="rail-avatar" title="Your resident">${sprite("player")}</span></div></nav>
- <main class="viewport"><div id="world"></div><div class="world-top"><div class="district-tag"><span class="tag-symbol">${icon(map ? "map" : mall ? "shop" : "pin", 22)}</span><span><small>${map ? "DISTRICT MAP" : mall ? "SHOPPING MALL" : unit(shop()).toUpperCase() + " · INTERIOR"}</small><strong>${map ? "Digital Po Lam" : location}</strong></span></div>${map ? `<button class="layer-btn ${view.territories ? "on" : ""}" data-do="layers" aria-pressed="${view.territories}">${icon("layers", 16)} Territories <i></i></button>` : `<button class="layer-btn" data-do="${mall ? "map" : "mall"}">${icon("back", 16)} ${mall ? "District map" : "Mall atrium"}</button>`}</div>
+ <main class="viewport"><div id="world"></div><div class="world-top"><div class="district-tag"><span class="tag-symbol">${icon(map ? "map" : mall ? "shop" : "pin", 22)}</span><span><small>${map ? "DISTRICT MAP" : mall ? "NEIGHBORHOOD" : unit(shop()).toUpperCase() + " · INTERIOR"}</small><strong>${map ? "Digital Po Lam" : location}</strong></span></div>${map ? `<button class="layer-btn ${view.territories ? "on" : ""}" data-do="layers" aria-pressed="${view.territories}">${icon("layers", 16)} Territories <i></i></button>` : `<button class="layer-btn" data-do="${mall ? "map" : "mall"}">${icon("back", 16)} ${mall ? "District map" : area.name}</button>`}</div>
  <section class="scene-card" aria-label="Current objective">${sceneCard()}</section><div id="effects" aria-hidden="true"></div></main></div>
- <footer class="statusbar"><span class="district-code"><i></i> PL / ${map ? "DISTRICT 01" : mall ? "MCP CENTRAL" : unit(shop()).toUpperCase()}</span><span class="foot-location">${icon("pin", 13)} ${map ? "Tseung Kwan O, Hong Kong" : "Po Lam · " + location}</span><span class="foot-tip">${icon(map ? "move" : "cursor", 13)} ${map ? "Drag to pan · Scroll to zoom" : mall ? "Select a storefront" : "Shop interior"}</span><span class="save-status">${icon("check", 13)} ${saveError ? "Session only" : "Local save"}</span></footer><div id="overlay"></div>`;
+ <footer class="statusbar"><span class="district-code"><i></i> PL / ${map ? "DISTRICT 01" : mall ? area.name : unit(shop()).toUpperCase()}</span><span class="foot-location">${icon("pin", 13)} ${map ? "Tseung Kwan O, Hong Kong" : "Po Lam · " + location}</span><span class="foot-tip">${icon(map ? "move" : "cursor", 13)} ${map ? "Drag to pan · Scroll to zoom" : mall ? "Select a storefront" : "Shop interior"}</span><span class="save-status">${icon("check", 13)} ${saveError ? "Session only" : "Local save"}</span></footer><div id="overlay"></div>`;
   const worldElement = document.querySelector("#world");
   worldCleanup = mountWorld(worldElement, {
     state,
@@ -404,29 +359,12 @@ function render() {
     shopId: view.shopId,
     territories: view.territories,
     mapShopId: view.mapShopId,
-    onMapShopFocus: (id) => {
-      if (
-        !worldElement.isConnected ||
-        modal ||
-        view.scene !== "map" ||
-        (id !== null && !Object.hasOwn(state.shops, id))
-      )
-        return;
-      if (view.mapShopId === id && !view.loc) return;
-      view.mapShopId = id;
-      view.loc = null;
-      if (id !== null) view.started = true;
-      persist();
-      document.querySelector(".scene-card").innerHTML = sceneCard();
-    },
+    areaId: view.region || "central",
     onLocation: (id) => {
-      if (!worldElement.isConnected || modal || !Object.hasOwn(areas, id))
-        return;
-      view.loc = id;
-      view.mapShopId = null;
+      if (!worldElement.isConnected || modal || !Object.hasOwn(REGIONS, id)) return;
+      const highlighted = view.mapShopId && regionOfShop(view.mapShopId) === id ? view.mapShopId : null;
       sound();
-      persist();
-      document.querySelector(".scene-card").innerHTML = sceneCard();
+      go("mall", highlighted, id);
     },
     onShop: (id) => {
       if (
@@ -446,7 +384,7 @@ function dialog(title, kicker, body, cls = "") {
   return `<div class="scrim"><section class="dialog ${cls}" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><header class="dialog-head"><div>${eyebrow(kicker)}<h2 id="dialog-title">${title}</h2></div>${languageButton()}<button class="circle-x" data-do="close" aria-label="Close">${icon("close")}</button></header><div class="dialog-content">${body}</div></section></div>`;
 }
 function quiz() {
-  const ids = ["tea", "game", "hotpot", "cafe", "sushi", "donut", "market"];
+  const ids = CENTRAL_TYPES;
   return dialog(
     "What belongs in Po Lam?",
     "YOUR NEIGHBORHOOD BALLOT",
@@ -557,7 +495,7 @@ function renderDialog() {
     case "scout":
       contents = d(
         "Scout report",
-        "MCP CENTRAL · " + unit(shop()).toUpperCase(),
+        REGIONS[shop().location].name + " · " + unit(shop()).toUpperCase(),
         `<div class="scout-art" style="background-image:url('assets/interiors/${shop().type}.webp')"></div><h3>${noun(shop().type)}</h3><p>Held by ${owner(shop())}. Defense ${shop().defense} / ${RULES.maxDefense}. Win a timed shop rush with ${RULES.minParticipants} distinct crew members to take control.</p>${btn("challenge", "Launch a challenge", "primary", "flag")}`,
       );
       break;
@@ -633,7 +571,7 @@ function renderDialog() {
       contents = d(
         "Your field guide",
         "HOW TO PLAY",
-        `<ol class="steps"><li><b>Find your crew</b>Choose three shop preferences and join an alliance.</li><li><b>Take the counter</b>Visit Glaze Lane at MCP Central. Invite two allies and clear the rush.</li><li><b>Choose the next shop</b>Cast your ballot, count the votes and advance a day to see the new storefront.</li></ol>${btn("close", "Back to the district")}`,
+        `<ol class="steps"><li><b>Find your crew</b>Choose three shop preferences and join an alliance.</li><li><b>Take the counter</b>Choose a place, enter a rival shop and invite two allies to clear the rush.</li><li><b>Choose the next shop</b>Cast your ballot, count the votes and advance a day to see the new storefront.</li></ol>${btn("close", "Back to the district")}`,
       );
       break;
     case "round":
@@ -847,15 +785,14 @@ function action(id) {
       break;
     case "returnToStreet":
       if (view.scene !== "shop") return;
-      go("map", view.shopId);
+      go("mall", view.shopId);
       break;
     case "mall":
-      view.started = true;
-      go("mall");
+      go("mall", view.scene === "shop" ? view.shopId : null, view.scene === "map" ? "central" : view.region);
       break;
     case "focusShop":
       if (!["map", "mall"].includes(view.scene)) return;
-      go("shop", view.mapShopId ?? districtFocusShop(state).id);
+      go("shop", view.mapShopId ?? (view.scene === "mall" ? REGIONS[view.region].units[0] : districtFocusShop(state).id));
       break;
     case "prefs":
       showPrefs();
@@ -870,7 +807,7 @@ function action(id) {
       if (act("JOIN", { alliance: selectedTeam })) {
         view.territories = true;
         go("map");
-        toast("Joined " + team().name + " · choose a street on the map.");
+        toast("Joined " + team().name + " · choose a place on the map.");
       }
       break;
     case "layers":

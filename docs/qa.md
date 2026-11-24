@@ -2,7 +2,7 @@
 
 ## Run the checks
 
-Use Node.js 20 or newer. The game, local server, production build and reducer tests use Node.js and browser APIs already available on the host. The two browser suites use the pinned Playwright development dependency.
+Use Node.js 20 or newer. The game, local server, production build and reducer tests use Node.js and browser APIs already available on the host. The three browser suites use the pinned Playwright development dependency.
 
 ```sh
 npm ci
@@ -17,9 +17,23 @@ Leave the server running and execute the browser suites in a second terminal.
 ```sh
 npm run test:e2e
 npm run test:bilingual
+npm run test:locations
 ```
 
 The default test address is `http://127.0.0.1:4173/`. Set `DEMO_URL` to test another local server, the built entry at `/dist/`, or a file URL for the built `dist/index.html`. Set `CHROME_PATH` to use an existing Chrome executable. `PLAYWRIGHT_PATH` can select an alternate Playwright installation. Screenshots from the pitch suite go to `test-results/screenshots/` unless `SCREENSHOT_DIR` is set. Each suite starts in a disposable browser context.
+
+## Six-location playtest
+
+Start a fresh world, enter Po Tsui Park straight from the map, then try the three actual shops beside the field. At Lemon Lap choose the tea, gaming and café preferences. Join the Trendsetters, capture Unit 07, vote for a local shop and advance one day. Verify the park, district map, interior and newspaper agree on the location, tenant and owner. MCP Central’s six shops also have their original IDs in upgraded saves.
+
+The 20 Node tests passed, including upgrade of the original six-shop world, independent local ballots and each alliance’s complete 21-unit campaign. The location suite opened every shop on desktop and in a 390 × 844 touch viewport. A separate 320 px check found and corrected overlapping station and mall hit targets. A fresh reviewer replayed the park and station after the portrait layout change and verified six individual entries and returns.
+
+| Game scene | Actual browser screenshot |
+| --- | --- |
+| Park paths and three shops | [Desktop](screenshots/area-park.jpg) · [Phone](screenshots/area-park-390.jpg) |
+| Station forecourt and estate courtyard | [Po Lam Station](screenshots/area-station.jpg) · [Po Lam Estate](screenshots/area-estate.jpg) |
+| Two other shopping arcades | [MCP Discovery](screenshots/area-discovery.jpg) · [MCP ONE](screenshots/area-one.jpg) |
+| Park shop interior and a local takeover | [Kite workshop](screenshots/inside-park-kite.jpg) · [Shutters down](screenshots/area-park-captured.jpg) · [Next day](screenshots/area-park-open.jpg) |
 
 ## Handoff checks, 24 November 2026
 
@@ -32,15 +46,15 @@ The default test address is `http://127.0.0.1:4173/`. Set `DEMO_URL` to test ano
 | Save recovery | An invalid landmark retained the valid world. An unreadable save survived temporary play byte for byte until explicit replacement. A stale tab detected another tab’s reset, paused its writes and loaded the latest world on request. The pre-write check also blocked the old snapshot with storage event delivery suppressed. |
 | Packaging and serving | `npm run build` produced the offline entry and its local styles and artwork. The loopback server served the source and built entry points, scripts, styles and art. It returned 404 for ordinary project documentation, tests and metadata, and 405 for an unsupported HTTP method. |
 
-## Shop-by-shop verification, 25 November 2026
+## Earlier two-street prototype, 25 November 2026
 
-All 19 Node tests passed, including legacy street focus and capture history across campaigns. A fresh Chromium session joined the Trendsetters and followed the playable doors on Station Walk. Pixel Port was its only starting shop here. After five correct orders with both allies, Glaze Lane shut and the street changed from 1/3 to 2/3. The player voted for tea and advanced one day. Reloading returned to the same street with Pearl Club open at 01. Five more orders at Little Steam put Unit 06 under the same flag. The final counts were 3/3 on Station Walk, 3/6 in the mall and 0/3 on Park Parade. The other four unit records were unchanged across these two captures. The animation below the README walkthrough uses four frames from a single browser playthrough.
+All 19 Node tests passed, including legacy street focus and capture history across campaigns. A fresh Chromium session joined the Trendsetters and followed the playable doors on Station Walk. Pixel Port was its only starting shop here. After five correct orders with both allies, Glaze Lane shut and the street changed from 1/3 to 2/3. The player voted for tea and advanced one day. Reloading returned to the same street with Pearl Club open at 01. Five more orders at Little Steam put Unit 06 under the same flag. The final counts were 3/3 on Station Walk, 3/6 in the mall and 0/3 on Park Parade. The other four unit records were unchanged across these two captures. The historical animation linked below uses four frames from a single browser playthrough.
 
 The desktop pitch and offline bilingual browser suite passed. The 390 × 844 touch emulation checked both street signs on entry and after camera reset. It opened all six shops and kept their names and counts visible after the capture. The street close-ups also passed at 320 px. An independent reviewer repeated the six-door route in Chinese.
 
 ## Presentation views
 
-The pitch suite captures 17 views at 1440 × 900, including the captured territory in English and Simplified Chinese. Seven of those views are also captured at 1366 × 768 and 1920 × 1080. The Chinese map after capture has a 390 × 844 portrait view, bringing the total to 32 JPEG images. It reads the actual order tickets and waits for visible lights in Service Relay before selecting each station. The camera test waits for the district illustration to decode before checking zoom, pan and recentering.
+The pitch suite captures the classroom route at 1440 × 900. Selected scenes also run at 1366 × 768, 1920 × 1080 and a 390 × 844 mobile viewport. The locations suite captures the new regional scenes separately. It reads the actual order tickets and waits for visible lights in Service Relay before selecting each station. The camera test waits for the district illustration to decode before checking zoom, pan and recentering.
 
 | Pitch sequence | Scene evidence |
 | --- | --- |
@@ -49,7 +63,7 @@ The pitch suite captures 17 views at 1440 × 900, including the captured territo
 | Explore MCP Central | [Mall atrium](screenshots/05-mall-atrium.jpg) · [Glaze Lane](screenshots/06-donut-shop.jpg) |
 | Win a counter | [Shop Rush](screenshots/07-shop-competition.jpg) · [Alliance ballot](screenshots/08-alliance-voting.jpg) |
 | Inspect the captured territory | [English](screenshots/15-territory-capture.jpg) · [简体中文](screenshots/16-territory-zh.jpg) |
-| Choose individual shops on one street | [Three doors after the tea opening](screenshots/17-street-storefronts.jpg) · [Two takeovers in one playthrough](screenshots/station-side-growth.webp) |
+| Historical two-street prototype | [Three doors after the tea opening](screenshots/17-street-storefronts.jpg) · [Two takeovers in one playthrough](screenshots/station-side-growth.webp) |
 | See the refit | [Renovation](screenshots/09-renovation.jpg) · [Grand opening](screenshots/10-grand-opening.jpg) · [Reopened storefront](screenshots/13-reopened-atrium.jpg) |
 | Follow the change | [Community paper](screenshots/12-po-lam-daily.jpg) · [Merchant insights](screenshots/11-merchant-insights.jpg) · [Updated district](screenshots/14-updated-district.jpg) |
 
@@ -59,6 +73,6 @@ The `-1366` and `-1920` files show the additional screen sizes for selected scen
 
 The first browser comparison used the live Agentopia Po Lam district and mall alongside the playable opening, preference ballot, mall, both sides of the counter, renovation, opening and newspaper. The initial territory markers made a change of control hard to read. An initial revision added state-driven zones to the mall roof and a separate floor diagram. A later playtest found that splitting the screen made it hard to relate the two views. The next revision drew the six influence areas directly on the district illustration. The opening count and the takeover count were captured on either side of the same contest.
 
-After the authorized 4:3 map and Agentopia logo were integrated, a second comparison exposed overlapping station and MCP Discovery labels. The signs were offset while their anchor points stayed on the corresponding landmarks. Desktop checks covered 1366, 1440 and 1920 pixels across. At widths of 320 and 390 pixels the same layer remained on the map. Pinching or using the minus control revealed the full 4:3 district, with all six shop emblems accessible. That version let a tap open a single shop. The current map opens a street with three doors. The before-capture and after-capture screenshots show the same district at one of six and two of six shops. A separate browser run reached six of six shops, reloaded, and confirmed all six still belonged to the same alliance.
+After the authorized 4:3 map and Agentopia logo were integrated, a second comparison exposed overlapping station and MCP Discovery labels. The signs were offset while their anchor points stayed on the corresponding landmarks. Desktop checks covered 1366, 1440 and 1920 pixels across. At widths of 320 and 390 pixels the same layer remained on the map. Pinching or using the minus control revealed the full 4:3 district, with all six shop emblems accessible. That version let a tap open a single shop. The following iteration opened each street with three doors. Six full location scenes now replace those two schematic streets. The before-capture and after-capture screenshots show the same district at one of six and two of six shops. A separate browser run reached six of six shops, reloaded, and confirmed all six still belonged to the same alliance.
 
 A fresh reviewer followed the README in an isolated copy. They reproduced the complete tea route, the single-participant win and the three-way tie. Their feedback clarified when the shop closes, when the next attack becomes available and which option wins that tie. They also found that opening-day flags used to mask the change after manually decorating a reopened shop. Opening-day confetti and the ribbon now mark the new shop; the alliance pennants appear only when installed, inside the shop and on its storefront.

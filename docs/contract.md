@@ -4,7 +4,7 @@ The source runs as browser ES modules. `npm run dev` serves the game on loopback
 
 ## World state
 
-`src/game.js` defines the seven tenant types, three playable alliances, named residents and round rules. `createGame()` initializes six persistent units at MCP Central. Unit 01 starts as Glaze Lane, held by the incumbent Arcade Guild. Each playable crew starts with one or two other units. The unit ID stays fixed through changes of tenant and owner.
+`src/regions.js` assigns 21 stable units to six locations. The original six and their seven possible tenants belong to MCP Central. Each other location starts with three different local tenants. The last two digits identify the same unit across visits, captures and new tenants. `src/game.js` defines the three playable alliances, residents and round rules.
 
 `reduce(state, action)` returns a new serializable world when it accepts an action. Rejected actions return the prior object. The world contains the session ID, day, player, units, current contest, proposal, renovation, event ledger, round results, visits by unit and completed refits.
 
@@ -19,11 +19,11 @@ The source runs as browser ES modules. `npm run dev` serves the game on loopback
 | `ADVANCE` | Open the winning tenant on its scheduled day and append one history entry. |
 | `STAFF`, `DECORATE` | Assign a named defender once per friendly unit, or install the alliance’s pennants. |
 
-A successful Shop Rush and three distinct participants can arrive in either order. Together they change ownership immediately and close the shop. A failed attacking shift restores the prior open phase and owner. A fresh challenge starts a new roster. The winning crew can challenge another rival after opening day. The six-unit completion prompt links to the daily paper and a confirmed restart. [Game design notes](game-design-notes.md)
+A successful Shop Rush and three distinct participants can arrive in either order. Together they change ownership immediately and close the shop. A failed attacking shift restores the prior open phase and owner. A fresh challenge starts a new roster. The winning crew can challenge another rival after opening day. The district-wide completion prompt links to the daily paper and a confirmed restart. [Game design notes](game-design-notes.md)
 
 ## Scene and activity interfaces
 
-`src/world.js` exports `mountWorld(container, {state, scene, shopId, territories, mapShopId, onMapShopFocus, onLocation, onShop})` for the map, mall and shop views. It returns a cleanup function. The district has six landmarks. MCP Central contains six playable storefronts. Its territory overlay is registered to the same camera-transformed district illustration. The street geometry and three unit IDs per street live in `src/streets.js`. Selecting a street focuses three independently enterable storefronts. Station side contains units 01, 03 and 06. Park side contains 02, 04 and 05. A saved mapShopId identifies a unit on the focused street. An older view without this field returns to its captured unit during an active takeover or refit. Other older district views open on the overview. Street and district counts, storefront art and borders read the same units as the mall. The outlines illustrate shop influence. Joining enables the layer. The manual switch persists with the view. `districtFocusShop(state)` selects the current contest or refit, then the latest reopening, then Unit 01.
+`mountWorld(container, {state, scene, areaId, shopId, territories, mapShopId, onLocation, onShop})` in `src/world.js` returns a cleanup function. The overview uses `scene="map"`. Selecting a place enters its own background with `scene="mall"` and its region ID. Each physical door resolves its own unit, tenant, owner and phase. The shop screen returns to that region. `src/region-layout.js` supplies positions for the overview parcels and local doors. `src/save.js` migrates valid six-shop v1 worlds to v2 by preserving their six units and game history, then adding the other fifteen units and visit counters.
 
 `src/rounds.js` mounts Shop Rush and Service Relay. The controller supplies a live crew lookup, a result callback for immediate settlement and a later callback for displaying the report. Leaving an unfinished shift discards its clock and inputs. `src/community.js` renders the daily paper, alliance roster, insights and Director controls from the same world.
 
