@@ -1,0 +1,11 @@
+# Po Lam field guide
+## Scene language
+The [reference study](reference-study.md) shows the reference's densely built oblique town, pale towers with gridded windows, cyan mall roofs, junction boxes, left-side park and station canopy. The game uses the authorized original 4:3 district image and overlays its interactive places and shop ownership. View the district from high above in warm daylight. The mall sits between the estate, station canopy and the other two MCP buildings. The map is an illustrated game district with compressed distances.
+
+Draw tiny faceted trees, repeating window bays, stepped tower crowns, traffic markings and individual commuters at one scale. Use a richly illustrated 1990s Japanese city-building game look with delicate dark pixel edges. Buildings take apricot, blush, ivory and teal. Roads are blue grey, junction boxes are gold. Interior artwork moves in close enough to read the products. Reuse the same materials, window trims, planters, light angle and outlines in each view.
+
+## Interface
+Frame the district as a playable neighborhood atlas. Carry the original Agentopia logo in a deep plum masthead. Use lilac borders, pale lavender panels and purple interaction controls. Keep each alliance’s color and emblem readable against the illustrated map. Shop and district labels attach to their places. Large display text uses a strong, slightly condensed humanist sans. Small uppercase captions use a monospace face with letter spacing. Keep panel edges and shadows crisp. Use a real map detail or storefront illustration on ballots. Preserve gamepad, transit, map, flag and newspaper silhouettes at 20 px.
+
+## Production
+Use the supplied district map and logo. Create the atrium, tenant interiors, shopfronts and interactive sprites for PolamLife. Keep reference screenshots in research documentation only. Produce one district map, one atrium, and coordinated shop counter illustrations. The donut and tea interiors must differ in counter material, equipment, inventory, ceiling lights and signs. For the reveal also change the external shop fixture, merchandise and map signal. Keep HUD labels outside raster art for legibility at different sizes.

@@ -1,0 +1,19 @@
+{
+  "name": "polamlife",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "test": "node --test tests/game.test.mjs",
+    "build": "node tools/package.mjs",
+    "test:e2e": "node tests/pitch.cjs",
+    "test:bilingual": "node tests/bilingual.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
